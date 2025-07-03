@@ -5,13 +5,19 @@ import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
 import { UserDashboard } from '@/components/dashboard/UserDashboard';
 import { Button } from '@/components/ui/button';
 import { LogOut, User as UserIcon } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface DashboardLayoutProps {
   user: User;
-  onLogout: () => void;
 }
 
-export const DashboardLayout = ({ user, onLogout }: DashboardLayoutProps) => {
+export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
+  const { signOut } = useAuth();
+
+  const handleLogout = async () => {
+    await signOut();
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Header */}
@@ -32,7 +38,7 @@ export const DashboardLayout = ({ user, onLogout }: DashboardLayoutProps) => {
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={onLogout}
+              onClick={handleLogout}
               className="flex items-center space-x-2"
             >
               <LogOut className="h-4 w-4" />

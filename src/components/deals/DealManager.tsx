@@ -31,21 +31,13 @@ export const DealManager = () => {
 
   const loadDeals = async () => {
     try {
-      // Use raw SQL query to avoid type issues
-      const { data, error } = await supabase.rpc('get_deals');
+      const { data, error } = await (supabase as any)
+        .from('deals')
+        .select('*')
+        .order('created_at', { ascending: false });
       
-      if (error) {
-        // Fallback to direct table access
-        const { data: fallbackData, error: fallbackError } = await (supabase as any)
-          .from('deals')
-          .select('*')
-          .order('created_at', { ascending: false });
-        
-        if (fallbackError) throw fallbackError;
-        setDeals(fallbackData || []);
-      } else {
-        setDeals(data || []);
-      }
+      if (error) throw error;
+      setDeals(data || []);
     } catch (error) {
       console.error('Error loading deals:', error);
       toast({

@@ -35,7 +35,7 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
 
   const loadDeals = async () => {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('deals')
         .select('id, name, code')
         .order('created_at', { ascending: false });
@@ -111,7 +111,7 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
             created_by: (await supabase.auth.getUser()).data.user?.id
           };
 
-          const { error } = await supabase
+          const { error } = await (supabase as any)
             .from('diligence_requests')
             .insert([requestData]);
 

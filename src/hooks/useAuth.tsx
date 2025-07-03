@@ -40,12 +40,12 @@ export const useAuth = () => {
               
               if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching profile:', error);
-                // Create default profile if none exists
+                // Create default profile if none exists - use BBT execution team for testing
                 const defaultProfile: Profile = {
                   id: session.user.id,
                   email: session.user.email || '',
                   name: session.user.email?.split('@')[0] || 'User',
-                  role: 'seller', // Default role
+                  role: 'bbt_execution_team', // Default to admin role for testing
                   created_at: new Date().toISOString(),
                 };
                 setProfile(defaultProfile);
@@ -55,22 +55,23 @@ export const useAuth = () => {
                   id: profileData.id,
                   email: profileData.email,
                   name: profileData.name,
-                  role: profileData.role as Profile['role'],
+                  role: (profileData.role as Profile['role']) || 'bbt_execution_team',
                   organization: (profileData as any).organization || undefined,
                   deal_id: (profileData as any).deal_id || undefined,
                   created_at: profileData.created_at,
                   last_active: (profileData as any).last_active || undefined
                 };
+                console.log('Profile loaded:', typedProfile);
                 setProfile(typedProfile);
               }
             } catch (error) {
               console.error('Error in profile fetch:', error);
-              // Fallback profile
+              // Fallback profile with admin role
               const fallbackProfile: Profile = {
                 id: session.user.id,
                 email: session.user.email || '',
                 name: session.user.email?.split('@')[0] || 'User',
-                role: 'seller',
+                role: 'bbt_execution_team',
                 created_at: new Date().toISOString(),
               };
               setProfile(fallbackProfile);

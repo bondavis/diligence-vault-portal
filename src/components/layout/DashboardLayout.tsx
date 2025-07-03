@@ -43,9 +43,13 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
     role: user.role === 'bbt_execution_team' ? viewAsRole : user.role
   };
 
-  // Determine if user should see admin dashboard
+  // Determine if user should see admin dashboard - BBT roles get admin access
   const isAdminUser = user.role === 'bbt_execution_team';
-  const shouldShowAdminDashboard = effectiveUser.role === 'bbt_execution_team';
+  const isBBTUser = user.role.startsWith('bbt_') || user.role === 'rsm' || user.role === 'hensen_efron';
+  const shouldShowAdminDashboard = effectiveUser.role === 'bbt_execution_team' || 
+    (effectiveUser.role.startsWith('bbt_') && viewAsRole === user.role);
+
+  console.log('Dashboard Layout - User role:', user.role, 'Should show admin:', shouldShowAdminDashboard, 'Is BBT user:', isBBTUser);
 
   return (
     <div className="min-h-screen bg-bb-light-gray">
@@ -101,8 +105,8 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
             />
           )}
 
-          {/* Dashboard Content - use effectiveUser which reflects the "view as" role */}
-          {shouldShowAdminDashboard ? (
+          {/* Dashboard Content - prioritize admin dashboard for BBT users */}
+          {(shouldShowAdminDashboard || isBBTUser) ? (
             <AdminDashboard user={effectiveUser} />
           ) : (
             <UserDashboard user={effectiveUser} />

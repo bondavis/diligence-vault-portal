@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -62,7 +61,7 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
           allow_file_upload: true,
           allow_text_response: true,
           deal_id: selectedDeal,
-          created_by: user!.id
+          created_by: user.id
         };
       });
 
@@ -113,15 +112,6 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
       toast({
         title: "Error",
         description: "Please select a deal to associate the requests with.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to upload requests.",
         variant: "destructive",
       });
       return;

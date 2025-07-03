@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -37,7 +38,7 @@ export const RequestManagementTable = () => {
   const [requests, setRequests] = useState<DiligenceRequest[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<DiligenceRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [selectedRequest, setSelectedRequest] = useState<DiligenceRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -234,7 +235,7 @@ export const RequestManagementTable = () => {
                     <TableRow 
                       key={request.id}
                       className="cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => setSelectedRequestId(request.id)}
+                      onClick={() => setSelectedRequest(request)}
                     >
                       <TableCell className="font-medium">
                         <div className="flex items-center space-x-2">
@@ -291,12 +292,12 @@ export const RequestManagementTable = () => {
         </CardContent>
       </Card>
 
-      {selectedRequestId && (
+      {selectedRequest && (
         <RequestDetailModal
-          requestId={selectedRequestId}
-          open={!!selectedRequestId}
-          onOpenChange={(open) => !open && setSelectedRequestId(null)}
-          onRequestUpdate={loadRequests}
+          request={selectedRequest}
+          isOpen={!!selectedRequest}
+          onClose={() => setSelectedRequest(null)}
+          onUpdate={loadRequests}
         />
       )}
     </>

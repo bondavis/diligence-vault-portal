@@ -19,6 +19,37 @@ interface DiligenceRequestUploadProps {
   onUploadComplete?: () => void;
 }
 
+// Category mapping for common variations
+const CATEGORY_MAPPING: Record<string, string> = {
+  'Finance': 'Financial',
+  'Financial': 'Financial',
+  'Legal': 'Legal',
+  'Operations': 'Operations',
+  'HR': 'HR',
+  'IT': 'IT',
+  'Environmental': 'Environmental',
+  'Commercial': 'Commercial',
+  'Other': 'Other',
+  'Military': 'Other', // Map unsupported categories to 'Other'
+  'rebate programs': 'Commercial',
+  'AP aging report': 'Financial',
+  'passports': 'HR',
+  'hire date': 'HR',
+  'parts': 'Operations',
+  'by employee': 'HR',
+  'and if needed': 'Other',
+  'if different': 'Other'
+};
+
+const PRIORITY_MAPPING: Record<string, string> = {
+  'high': 'high',
+  'medium': 'medium',
+  'low': 'low',
+  'High': 'high',
+  'Medium': 'medium',
+  'Low': 'low'
+};
+
 export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUploadProps) => {
   const [file, setFile] = useState<File | null>(null);
   const [selectedDeal, setSelectedDeal] = useState<string>('');
@@ -80,6 +111,95 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
     return data;
   };
 
+  const validateAndCleanData = (request: any, rowIndex: number): { data: any; error: string | null } => {
+    const errors: string[] = [];
+
+    // Clean title
+    if (!request.title || !request.title.trim()) {
+      errors.push('Title is required');
+    }
+
+    // Map and validate category
+    let category = 'Other';
+    if (request.category) {
+      const mappedCategory = CATEGORY_MAPPING[request.category.trim()];
+      if (mappedCategory) {
+        category = mappedCategory;
+      } else {
+        // If not found in mapping, default to 'Other' and note it
+        category = 'Other';
+        console.log(`Row ${rowIndex + 2}: Unknown category "${request.category}" mapped to "Other"`);
+      }
+    }
+
+    // Map and validate priority
+    let priority = 'medium';
+    if (request.priority) {
+      const mappedPriority = PRIORITY_MAPPING[request.priority.trim()];
+      if (mappedPriority) {
+        priority = mappedPriority;
+      }
+    }
+
+    // Parse due_date from period field
+    let due_date = null;
+    if (request.period && request.period.trim()) {
+      const periodText = request.period.trim();
+      // Skip invalid date formats like "Last month" or very long descriptions
+      if (periodText.length < 50 && !periodText.toLowerCase().includes('last month')) {
+        // Try to parse common date formats
+        const datePatterns = [
+          /^Q(\d)\s+(\d{4})$/i, // Q1 2024, Q4 2024
+          /^(\w+)\s+(\d{4})$/i, // January 2025, December 2024
+          /^(\d{4})-(\d{1,2})-(\d{1,2})$/, // 2024-12-31
+          /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/ // 12/31/2024
+        ];
+
+        for (const pattern of datePatterns) {
+          const match = periodText.match(pattern);
+          if (match) {
+            if (pattern.source.includes('Q')) {
+              // Quarter format: Q1 2024 -> 2024-03-31
+              const quarter = parseInt(match[1]);
+              const year = parseInt(match[2]);
+              const month = quarter * 3; // Q1=3, Q2=6, Q3=9, Q4=12
+              due_date = `${year}-${month.toString().padStart(2, '0')}-28`;
+            } else if (pattern.source.includes('w+')) {
+              // Month Year format: January 2025 -> 2025-01-31
+              const monthNames = ['january', 'february', 'march', 'april', 'may', 'june',
+                               'july', 'august', 'september', 'october', 'november', 'december'];
+              const monthIndex = monthNames.indexOf(match[1].toLowerCase());
+              if (monthIndex >= 0) {
+                due_date = `${match[2]}-${(monthIndex + 1).toString().padStart(2, '0')}-28`;
+              }
+            } else {
+              // Standard date formats
+              due_date = periodText;
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    if (errors.length > 0) {
+      return { data: null, error: errors.join(', ') };
+    }
+
+    return {
+      data: {
+        title: request.title.trim(),
+        description: request.description || '',
+        category,
+        priority,
+        due_date,
+        allow_file_upload: request.allow_file_upload === 'false' ? false : true,
+        allow_text_response: request.allow_text_response === 'false' ? false : true
+      },
+      error: null
+    };
+  };
+
   const handleUpload = async () => {
     if (!file || !selectedDeal) {
       toast({
@@ -102,27 +222,38 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
         throw new Error('No valid requests found in CSV file');
       }
 
+      const currentUser = await supabase.auth.getUser();
+      if (!currentUser.data.user) {
+        throw new Error('User not authenticated');
+      }
+
       for (const [index, request] of requests.entries()) {
         try {
+          const { data: cleanedData, error: validationError } = validateAndCleanData(request, index);
+          
+          if (validationError) {
+            errors.push(`Row ${index + 2}: ${validationError}`);
+            continue;
+          }
+
           const requestData = {
             deal_id: selectedDeal,
-            title: request.title,
-            description: request.description || '',
-            category: request.category || 'Other',
-            priority: request.priority || 'medium',
-            due_date: request.period || null,
-            allow_file_upload: request.allow_file_upload === 'false' ? false : true,
-            allow_text_response: request.allow_text_response === 'false' ? false : true,
-            created_by: (await supabase.auth.getUser()).data.user?.id
+            created_by: currentUser.data.user.id,
+            ...cleanedData
           };
 
           const { error } = await (supabase as any)
             .from('diligence_requests')
             .insert([requestData]);
 
-          if (error) throw error;
-          successCount++;
+          if (error) {
+            console.error('Database error:', error);
+            errors.push(`Row ${index + 2}: ${error.message}`);
+          } else {
+            successCount++;
+          }
         } catch (error) {
+          console.error('Row processing error:', error);
           errors.push(`Row ${index + 2}: ${error instanceof Error ? error.message : 'Unknown error'}`);
         }
       }
@@ -137,7 +268,16 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
         onUploadComplete?.();
       }
 
+      if (errors.length > 0) {
+        toast({
+          title: "Upload Issues",
+          description: `${errors.length} rows had errors. Check results below.`,
+          variant: "destructive",
+        });
+      }
+
     } catch (error) {
+      console.error('Upload error:', error);
       toast({
         title: "Upload Error",
         description: error instanceof Error ? error.message : 'Failed to process file',
@@ -152,8 +292,9 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
     const template = [
       'title,description,category,priority,period,allow_file_upload,allow_text_response',
       'Audited Financial Statements,"Please provide audited financial statements for the last 3 years",Financial,high,Q4 2024,true,false',
-      'Revenue Recognition Policy,"Describe the company\'s revenue recognition policy",Financial,medium,,true,true',
-      'Material Contracts,"Upload all material contracts",Legal,high,Q4 2024,true,false'
+      'Revenue Recognition Policy,"Describe the company\'s revenue recognition policy",Financial,medium,January 2025,true,true',
+      'Material Contracts,"Upload all material contracts",Legal,high,Q1 2025,true,false',
+      'Employee Handbook,"Provide current employee handbook",HR,medium,February 2025,true,true'
     ].join('\n');
 
     const blob = new Blob([template], { type: 'text/csv' });
@@ -272,6 +413,11 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
             <li>• <strong>allow_file_upload</strong>: true/false</li>
             <li>• <strong>allow_text_response</strong>: true/false</li>
           </ul>
+          <div className="mt-2 p-2 bg-yellow-50 rounded border-l-4 border-yellow-400">
+            <p className="text-yellow-800 text-xs">
+              <strong>Note:</strong> Categories will be automatically mapped to valid values. Unknown categories will be set to "Other".
+            </p>
+          </div>
         </div>
       </CardContent>
     </Card>

@@ -88,6 +88,7 @@ export const UserManagement = () => {
 
   const getRoleColor = (role: UserRole) => {
     switch (role) {
+      case 'admin': return 'bg-purple-100 text-purple-800';
       case 'bbt_execution_team': return 'bg-red-100 text-red-800';
       case 'bbt_operations':
       case 'bbt_finance':
@@ -103,7 +104,7 @@ export const UserManagement = () => {
   };
 
   const getRoleIcon = (role: UserRole) => {
-    if (role === 'bbt_execution_team') return <Shield className="h-3 w-3" />;
+    if (role === 'admin' || role === 'bbt_execution_team') return <Shield className="h-3 w-3" />;
     if (role.startsWith('bbt_')) return <Building className="h-3 w-3" />;
     if (role.startsWith('seller')) return <Users className="h-3 w-3" />;
     return <Mail className="h-3 w-3" />;
@@ -111,6 +112,7 @@ export const UserManagement = () => {
 
   const getRoleDisplayName = (role: UserRole): string => {
     const roleMap: Record<UserRole, string> = {
+      admin: 'Admin',
       bbt_execution_team: 'BBT Execution Team',
       bbt_operations: 'BBT Operations',
       bbt_finance: 'BBT Finance',
@@ -175,6 +177,7 @@ export const UserManagement = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
+                <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="bbt_execution_team">BBT Execution Team</SelectItem>
                 <SelectItem value="bbt_operations">BBT Operations</SelectItem>
                 <SelectItem value="bbt_finance">BBT Finance</SelectItem>

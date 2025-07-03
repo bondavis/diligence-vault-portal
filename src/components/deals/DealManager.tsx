@@ -56,14 +56,16 @@ export const DealManager = ({ onDealCreated }: DealManagerProps) => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Create the deal
+      // Create the deal - fix: pass single object instead of array
       const { data: deal, error: dealError } = await supabase
         .from('deals')
-        .insert([{
-          ...values,
+        .insert({
+          name: values.name,
+          company_name: values.company_name,
+          project_name: values.project_name,
           created_by: user.id,
           target_close_date: values.target_close_date?.toISOString().split('T')[0] || null,
-        }])
+        })
         .select()
         .single();
 

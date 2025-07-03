@@ -13,13 +13,17 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Label } from '@/components/ui/label';
 import { Plus, Edit, Trash2, Upload } from 'lucide-react';
 import { TemplateUploadZone } from './TemplateUploadZone';
+import type { Database } from '@/integrations/supabase/types';
+
+type RequestCategory = Database['public']['Enums']['request_category'];
+type RequestPriority = Database['public']['Enums']['request_priority'];
 
 interface RequestTemplate {
   id: string;
   title: string;
   description: string | null;
-  category: string;
-  priority: 'high' | 'medium' | 'low';
+  category: RequestCategory;
+  priority: RequestPriority;
   typical_period: string | null;
   allow_file_upload: boolean;
   allow_text_response: boolean;
@@ -39,8 +43,8 @@ export const TemplateManager = () => {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    category: 'Other',
-    priority: 'medium' as 'high' | 'medium' | 'low',
+    category: 'Other' as RequestCategory,
+    priority: 'medium' as RequestPriority,
     typical_period: '',
     allow_file_upload: true,
     allow_text_response: true,
@@ -86,9 +90,10 @@ export const TemplateManager = () => {
         if (error) throw error;
         toast({ title: "Success", description: "Template updated successfully" });
       } else {
+        // Fix: pass single object instead of array
         const { error } = await supabase
           .from('request_templates')
-          .insert([formData]);
+          .insert(formData);
 
         if (error) throw error;
         toast({ title: "Success", description: "Template created successfully" });
@@ -245,7 +250,7 @@ export const TemplateManager = () => {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <Label htmlFor="category">Category</Label>
-                        <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                        <Select value={formData.category} onValueChange={(value: RequestCategory) => setFormData({...formData, category: value})}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
@@ -263,7 +268,7 @@ export const TemplateManager = () => {
                       </div>
                       <div>
                         <Label htmlFor="priority">Priority</Label>
-                        <Select value={formData.priority} onValueChange={(value: 'high' | 'medium' | 'low') => setFormData({...formData, priority: value})}>
+                        <Select value={formData.priority} onValueChange={(value: RequestPriority) => setFormData({...formData, priority: value})}>
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>

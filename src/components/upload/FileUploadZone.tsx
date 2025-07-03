@@ -1,11 +1,11 @@
-
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Upload, X, File, CheckCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { DocumentList } from '@/components/admin/DocumentList';
 
 interface FileUploadZoneProps {
   requestId: string;
@@ -14,10 +14,39 @@ interface FileUploadZoneProps {
 
 export const FileUploadZone = ({ requestId, onUploadComplete }: FileUploadZoneProps) => {
   const [files, setFiles] = useState<File[]>([]);
+  const [uploadedDocuments, setUploadedDocuments] = useState<any[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    loadDocuments();
+  }, [requestId]);
+
+  const loadDocuments = async () => {
+    try {
+      setLoading(true);
+      const { data: documents, error } = await supabase
+        .from('request_documents')
+        .select('*')
+        .eq('request_id', requestId)
+        .order('uploaded_at', { ascending: false });
+
+      if (error) throw error;
+      setUploadedDocuments(documents || []);
+    } catch (error) {
+      console.error('Error loading documents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load documents",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -94,6 +123,7 @@ export const FileUploadZone = ({ requestId, onUploadComplete }: FileUploadZonePr
       });
 
       setFiles([]);
+      loadDocuments();
       if (onUploadComplete) {
         onUploadComplete();
       }
@@ -119,7 +149,7 @@ export const FileUploadZone = ({ requestId, onUploadComplete }: FileUploadZonePr
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Drop Zone */}
       <Card
         className={`border-2 border-dashed transition-colors ${
@@ -211,6 +241,17 @@ export const FileUploadZone = ({ requestId, onUploadComplete }: FileUploadZonePr
               </>
             )}
           </Button>
+        </div>
+      )}
+
+      {/* Uploaded Documents */}
+      {uploadedDocuments.length > 0 && (
+        <div className="space-y-3">
+          <h4 className="font-medium text-sm">Uploaded Documents ({uploadedDocuments.length})</h4>
+          <DocumentList 
+            documents={uploadedDocuments} 
+            onDocumentUpdate={loadDocuments}
+          />
         </div>
       )}
 

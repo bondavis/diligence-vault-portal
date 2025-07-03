@@ -9,6 +9,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RequestDetailModal } from './RequestDetailModal';
 import { templateService } from '@/services/templateService';
+import { Database } from '@/integrations/supabase/types';
+
+type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'] & {
+  document_count?: number;
+  has_response?: boolean;
+  computed_status?: string;
+};
+
+type RequestPriority = Database['public']['Enums']['request_priority'];
 
 interface Deal {
   id: string;
@@ -19,23 +28,6 @@ interface Deal {
   created_at: string;
   request_count?: number;
   completed_count?: number;
-}
-
-interface DiligenceRequest {
-  id: string;
-  title: string;
-  description: string | null;
-  category: string;
-  priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'submitted' | 'approved' | 'rejected';
-  due_date: string | null;
-  created_at: string;
-  document_count?: number;
-  has_response?: boolean;
-  computed_status?: string;
-  allow_file_upload: boolean;
-  allow_text_response: boolean;
-  period_text: string | null;
 }
 
 interface CategoryProgress {
@@ -186,7 +178,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
     });
   };
 
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityBadge = (priority: RequestPriority) => {
     switch (priority) {
       case 'high': 
         return <Badge className="bg-red-500 text-white hover:bg-red-600">HIGH</Badge>;

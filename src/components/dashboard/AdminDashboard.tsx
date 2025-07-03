@@ -3,13 +3,14 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Building, FileText, TrendingUp, AlertCircle } from 'lucide-react';
+import { Users, Building, FileText, TrendingUp, AlertCircle, Settings } from 'lucide-react';
 import { User } from '@/pages/Index';
 import { UserManagement } from '@/components/users/UserManagement';
 import { DealsOverview } from '@/components/deals/DealsOverview';
 import { DiligenceRequestUpload } from '@/components/upload/DiligenceRequestUpload';
 import { RequestManagementTable } from '@/components/admin/RequestManagementTable';
 import { CategoryProgressCard } from '@/components/admin/CategoryProgressCard';
+import { TemplateManager } from '@/components/templates/TemplateManager';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -176,7 +177,7 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
             <div>
               <CardTitle className="text-2xl">Admin Dashboard</CardTitle>
               <CardDescription className="text-red-100">
-                Manage users, deals, and diligence requests
+                Manage users, deals, templates, and diligence requests
               </CardDescription>
             </div>
             <div className="text-right">
@@ -249,8 +250,9 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
       {/* Management Tabs */}
       <Tabs defaultValue="requests" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-5">
           <TabsTrigger value="requests">Request Management</TabsTrigger>
+          <TabsTrigger value="templates">Templates</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="deals">Deals</TabsTrigger>
           <TabsTrigger value="upload">Upload</TabsTrigger>
@@ -273,6 +275,10 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
               <RequestManagementTable />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="templates">
+          <TemplateManager />
         </TabsContent>
 
         <TabsContent value="users">

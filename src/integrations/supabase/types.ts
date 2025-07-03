@@ -225,6 +225,48 @@ export type Database = {
           },
         ]
       }
+      request_templates: {
+        Row: {
+          allow_file_upload: boolean
+          allow_text_response: boolean
+          category: Database["public"]["Enums"]["request_category"]
+          created_at: string
+          description: string | null
+          id: string
+          priority: Database["public"]["Enums"]["request_priority"]
+          sort_order: number | null
+          title: string
+          typical_period: string | null
+          updated_at: string
+        }
+        Insert: {
+          allow_file_upload?: boolean
+          allow_text_response?: boolean
+          category?: Database["public"]["Enums"]["request_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["request_priority"]
+          sort_order?: number | null
+          title: string
+          typical_period?: string | null
+          updated_at?: string
+        }
+        Update: {
+          allow_file_upload?: boolean
+          allow_text_response?: boolean
+          category?: Database["public"]["Enums"]["request_category"]
+          created_at?: string
+          description?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["request_priority"]
+          sort_order?: number | null
+          title?: string
+          typical_period?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

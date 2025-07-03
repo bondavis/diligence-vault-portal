@@ -1,224 +1,224 @@
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Plus, Building, Calendar } from 'lucide-react';
+
+import React, { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { CalendarIcon, Plus } from 'lucide-react';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
+import { templateService } from '@/services/templateService';
 
-interface Deal {
-  id: string;
-  name: string;
-  project_name: string;
-  company_name: string;
-  target_close_date: string | null;
-  created_at: string;
+const dealSchema = z.object({
+  name: z.string().min(1, 'Deal name is required'),
+  company_name: z.string().min(1, 'Company name is required'),
+  project_name: z.string().min(1, 'Project name is required'),
+  target_close_date: z.date().optional(),
+});
+
+type DealFormValues = z.infer<typeof dealSchema>;
+
+interface DealManagerProps {
+  onDealCreated?: () => void;
 }
 
-export const DealManager = () => {
-  const [deals, setDeals] = useState<Deal[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [newDeal, setNewDeal] = useState({
-    project_name: '',
-    company_name: '',
-    target_close_date: ''
-  });
+export const DealManager = ({ onDealCreated }: DealManagerProps) => {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [templateCount, setTemplateCount] = useState<number | null>(null);
   const { toast } = useToast();
 
-  const loadDeals = async () => {
-    try {
-      const { data, error } = await (supabase as any)
-        .from('deals')
-        .select('*')
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      setDeals(data || []);
-    } catch (error) {
-      console.error('Error loading deals:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load projects",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const form = useForm<DealFormValues>({
+    resolver: zodResolver(dealSchema),
+    defaultValues: {
+      name: '',
+      company_name: '',
+      project_name: '',
+    },
+  });
 
-  useEffect(() => {
-    loadDeals();
+  React.useEffect(() => {
+    // Load template count to show user what will be applied
+    templateService.getTemplateCount().then(setTemplateCount);
   }, []);
 
-  const createDeal = async () => {
-    if (!newDeal.project_name || !newDeal.company_name || !newDeal.target_close_date) {
-      toast({
-        title: "Missing Information",
-        description: "Please provide project name, company name, and target close date",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setCreating(true);
+  const onSubmit = async (values: DealFormValues) => {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      
-      const { data, error } = await (supabase as any)
+      setIsSubmitting(true);
+
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      // Create the deal
+      const { data: deal, error: dealError } = await supabase
         .from('deals')
         .insert([{
-          name: newDeal.project_name,
-          project_name: newDeal.project_name,
-          company_name: newDeal.company_name,
-          target_close_date: newDeal.target_close_date,
-          created_by: userData.user?.id
+          ...values,
+          created_by: user.id,
+          target_close_date: values.target_close_date?.toISOString().split('T')[0] || null,
         }])
         .select()
         .single();
 
-      if (error) throw error;
+      if (dealError) throw dealError;
 
-      toast({
-        title: "Project Created",
-        description: `${newDeal.project_name} has been created successfully`,
-      });
+      // Apply master template to the new deal
+      try {
+        await templateService.applyTemplateToDeal(deal.id, user.id);
+        
+        toast({
+          title: "Deal Created Successfully",
+          description: templateCount && templateCount > 0 
+            ? `Deal created with ${templateCount} template requests applied automatically`
+            : "Deal created successfully",
+        });
+      } catch (templateError) {
+        console.error('Error applying template:', templateError);
+        toast({
+          title: "Deal Created",
+          description: "Deal created, but there was an issue applying the master template. You can add requests manually.",
+          variant: "destructive",
+        });
+      }
 
-      setNewDeal({ project_name: '', company_name: '', target_close_date: '' });
-      setShowCreateDialog(false);
-      loadDeals();
+      // Reset form
+      form.reset();
+      
+      // Notify parent component
+      if (onDealCreated) {
+        onDealCreated();
+      }
 
     } catch (error) {
-      console.error('Error creating project:', error);
+      console.error('Error creating deal:', error);
       toast({
         title: "Error",
-        description: "Failed to create project",
+        description: "Failed to create deal. Please try again.",
         variant: "destructive",
       });
     } finally {
-      setCreating(false);
+      setIsSubmitting(false);
     }
   };
-
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="p-6">
-          <div className="text-center">Loading projects...</div>
-        </CardContent>
-      </Card>
-    );
-  }
 
   return (
     <Card>
       <CardHeader>
-        <div className="flex items-center justify-between">
-          <div>
-            <CardTitle className="flex items-center space-x-2">
-              <Building className="h-5 w-5" />
-              <span>Project Management</span>
-            </CardTitle>
-            <CardDescription>Create and manage M&A projects</CardDescription>
-          </div>
-          <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-            <DialogTrigger asChild>
-              <Button className="bg-bb-red hover:bg-red-700">
-                <Plus className="h-4 w-4 mr-2" />
-                New Project
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Create New Project</DialogTitle>
-                <DialogDescription>
-                  Add a new M&A project to the platform
-                </DialogDescription>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="project-name">Project Name *</Label>
-                  <Input
-                    id="project-name"
-                    placeholder="e.g., Project Alpha"
-                    value={newDeal.project_name}
-                    onChange={(e) => setNewDeal(prev => ({ ...prev, project_name: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="company-name">Company Name *</Label>
-                  <Input
-                    id="company-name"
-                    placeholder="e.g., TechCorp Inc."
-                    value={newDeal.company_name}
-                    onChange={(e) => setNewDeal(prev => ({ ...prev, company_name: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="target-close">Target Close Date *</Label>
-                  <Input
-                    id="target-close"
-                    type="date"
-                    value={newDeal.target_close_date}
-                    onChange={(e) => setNewDeal(prev => ({ ...prev, target_close_date: e.target.value }))}
-                    required
-                  />
-                </div>
-                <div className="flex space-x-2">
-                  <Button 
-                    onClick={createDeal} 
-                    disabled={creating}
-                    className="bg-bb-red hover:bg-red-700"
-                  >
-                    {creating ? 'Creating...' : 'Create Project'}
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setShowCreateDialog(false)}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+        <CardTitle className="flex items-center space-x-2">
+          <Plus className="h-5 w-5" />
+          <span>Create New Deal</span>
+        </CardTitle>
+        <CardDescription>
+          Create a new deal/project. 
+          {templateCount !== null && templateCount > 0 && (
+            <span className="text-green-600 font-medium">
+              {' '}({templateCount} template requests will be applied automatically)
+            </span>
+          )}
+        </CardDescription>
       </CardHeader>
       <CardContent>
-        {deals.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <Building className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>No projects created yet</p>
-            <p className="text-sm">Create your first project to get started</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {deals.map(deal => (
-              <div key={deal.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">{deal.name}</h3>
-                    <p className="text-sm text-gray-600">Company: {deal.company_name}</p>
-                    {deal.target_close_date && (
-                      <p className="text-xs text-gray-500 flex items-center mt-1">
-                        <Calendar className="h-3 w-3 mr-1" />
-                        Target Close: {new Date(deal.target_close_date).toLocaleDateString()}
-                      </p>
-                    )}
-                  </div>
-                  <div className="text-right text-sm text-gray-500">
-                    Created {new Date(deal.created_at).toLocaleDateString()}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Deal Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter deal name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="company_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Company Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter company name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="project_name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Project Name</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter project name" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="target_close_date"
+              render={({ field }) => (
+                <FormItem className="flex flex-col">
+                  <FormLabel>Target Close Date</FormLabel>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          className={cn(
+                            "w-full pl-3 text-left font-normal",
+                            !field.value && "text-muted-foreground"
+                          )}
+                        >
+                          {field.value ? (
+                            format(field.value, "PPP")
+                          ) : (
+                            <span>Pick a date</span>
+                          )}
+                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={field.value}
+                        onSelect={field.onChange}
+                        disabled={(date) =>
+                          date < new Date()
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  <FormDescription>
+                    Optional target date for closing this deal
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting ? 'Creating Deal...' : 'Create Deal'}
+            </Button>
+          </form>
+        </Form>
       </CardContent>
     </Card>
   );

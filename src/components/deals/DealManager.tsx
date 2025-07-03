@@ -12,7 +12,8 @@ import { useToast } from '@/hooks/use-toast';
 interface Deal {
   id: string;
   name: string;
-  code: string;
+  project_name: string;
+  company_name: string;
   target_close_date: string | null;
   created_at: string;
 }
@@ -24,7 +25,8 @@ export const DealManager = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newDeal, setNewDeal] = useState({
     name: '',
-    code: '',
+    project_name: '',
+    company_name: '',
     target_close_date: ''
   });
   const { toast } = useToast();
@@ -55,10 +57,10 @@ export const DealManager = () => {
   }, []);
 
   const createDeal = async () => {
-    if (!newDeal.name || !newDeal.code) {
+    if (!newDeal.name || !newDeal.project_name || !newDeal.company_name) {
       toast({
         title: "Missing Information",
-        description: "Please provide both deal name and code",
+        description: "Please provide deal name, project name, and company name",
         variant: "destructive",
       });
       return;
@@ -72,7 +74,8 @@ export const DealManager = () => {
         .from('deals')
         .insert([{
           name: newDeal.name,
-          code: newDeal.code,
+          project_name: newDeal.project_name,
+          company_name: newDeal.company_name,
           target_close_date: newDeal.target_close_date || null,
           created_by: userData.user?.id
         }])
@@ -86,7 +89,7 @@ export const DealManager = () => {
         description: `${newDeal.name} has been created successfully`,
       });
 
-      setNewDeal({ name: '', code: '', target_close_date: '' });
+      setNewDeal({ name: '', project_name: '', company_name: '', target_close_date: '' });
       setShowCreateDialog(false);
       loadDeals();
 
@@ -148,12 +151,21 @@ export const DealManager = () => {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="deal-code">Deal Code</Label>
+                  <Label htmlFor="project-name">Project Name</Label>
                   <Input
-                    id="deal-code"
-                    placeholder="e.g., TECH-2024-001"
-                    value={newDeal.code}
-                    onChange={(e) => setNewDeal(prev => ({ ...prev, code: e.target.value }))}
+                    id="project-name"
+                    placeholder="e.g., Project Alpha"
+                    value={newDeal.project_name}
+                    onChange={(e) => setNewDeal(prev => ({ ...prev, project_name: e.target.value }))}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="company-name">Company Name</Label>
+                  <Input
+                    id="company-name"
+                    placeholder="e.g., TechCorp Inc."
+                    value={newDeal.company_name}
+                    onChange={(e) => setNewDeal(prev => ({ ...prev, company_name: e.target.value }))}
                   />
                 </div>
                 <div className="space-y-2">
@@ -199,7 +211,8 @@ export const DealManager = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium">{deal.name}</h3>
-                    <p className="text-sm text-gray-600">Code: {deal.code}</p>
+                    <p className="text-sm text-gray-600">Project: {deal.project_name}</p>
+                    <p className="text-sm text-gray-600">Company: {deal.company_name}</p>
                     {deal.target_close_date && (
                       <p className="text-xs text-gray-500 flex items-center mt-1">
                         <Calendar className="h-3 w-3 mr-1" />

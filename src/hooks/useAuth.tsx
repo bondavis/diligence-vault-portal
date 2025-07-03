@@ -1,5 +1,4 @@
 
-
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,11 +24,12 @@ export const useAuth = () => {
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
         
         if (session?.user) {
-          // Fetch user profile
+          // Fetch user profile with a small delay to avoid deadlock
           setTimeout(async () => {
             try {
               const { data: profileData, error } = await supabase
@@ -40,6 +40,15 @@ export const useAuth = () => {
               
               if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching profile:', error);
+                // Create default profile if none exists
+                const defaultProfile: Profile = {
+                  id: session.user.id,
+                  email: session.user.email || '',
+                  name: session.user.email?.split('@')[0] || 'User',
+                  role: 'seller', // Default role
+                  created_at: new Date().toISOString(),
+                };
+                setProfile(defaultProfile);
               } else if (profileData) {
                 // Type cast the profile data to ensure it matches our interface
                 const typedProfile: Profile = {
@@ -56,8 +65,17 @@ export const useAuth = () => {
               }
             } catch (error) {
               console.error('Error in profile fetch:', error);
+              // Fallback profile
+              const fallbackProfile: Profile = {
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.email?.split('@')[0] || 'User',
+                role: 'seller',
+                created_at: new Date().toISOString(),
+              };
+              setProfile(fallbackProfile);
             }
-          }, 0);
+          }, 100);
         } else {
           setProfile(null);
         }
@@ -68,9 +86,12 @@ export const useAuth = () => {
 
     // Check for existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
-      setLoading(false);
+      if (!session) {
+        setLoading(false);
+      }
     });
 
     return () => subscription.unsubscribe();
@@ -95,4 +116,3 @@ export const useAuth = () => {
     signOut,
   };
 };
-

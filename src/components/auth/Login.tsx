@@ -5,41 +5,50 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { User } from '@/pages/Index';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
 
-interface LoginProps {
-  onLogin: (user: User) => void;
-}
-
-export const Login = ({ onLogin }: LoginProps) => {
+export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
+  const navigate = useNavigate();
 
-  // Updated demo users with new role structure
-  const demoUsers: User[] = [
-    { id: '1', email: 'admin@bigbrandtire.com', name: 'Sarah Chen', role: 'bbt_execution_team', organization: 'BBT' },
-    { id: '2', email: 'seller@techacq.com', name: 'Michael Torres', role: 'seller', organization: 'Seller', dealId: 'deal-1' },
-    { id: '3', email: 'legal@sellercorp.com', name: 'Jennifer Walsh', role: 'seller_legal', organization: 'Seller', dealId: 'deal-1' },
-    { id: '4', email: 'viewer@rsm.com', name: 'David Kim', role: 'rsm', organization: 'RSM' }
-  ];
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    // Simulate API call
-    setTimeout(() => {
-      const user = demoUsers.find(u => u.email === email);
-      if (user && (password === 'demo123' || password === 'password')) {
-        onLogin(user);
+    try {
+      if (isSignUp) {
+        const { error } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/`
+          }
+        });
+        
+        if (error) throw error;
+        
+        setError('Check your email for the confirmation link!');
       } else {
-        setError('Invalid email or password');
+        const { error } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        
+        if (error) throw error;
+        
+        navigate('/');
       }
+    } catch (error: any) {
+      setError(error.message || 'Authentication failed');
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
@@ -52,13 +61,18 @@ export const Login = ({ onLogin }: LoginProps) => {
 
         <Card className="shadow-lg border-0">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-2xl text-center">Sign In</CardTitle>
+            <CardTitle className="text-2xl text-center">
+              {isSignUp ? 'Sign Up' : 'Sign In'}
+            </CardTitle>
             <CardDescription className="text-center">
-              Enter your credentials to access your deal room
+              {isSignUp 
+                ? 'Create your account to access deal rooms'
+                : 'Enter your credentials to access your deal room'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleAuth} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
@@ -82,23 +96,33 @@ export const Login = ({ onLogin }: LoginProps) => {
                 />
               </div>
               {error && (
-                <Alert variant="destructive">
+                <Alert variant={error.includes('Check your email') ? 'default' : 'destructive'}>
                   <AlertDescription>{error}</AlertDescription>
                 </Alert>
               )}
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? 'Signing in...' : 'Sign In'}
+                {loading ? 'Processing...' : (isSignUp ? 'Sign Up' : 'Sign In')}
               </Button>
             </form>
 
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                {isSignUp 
+                  ? 'Already have an account? Sign in'
+                  : "Don't have an account? Sign up"
+                }
+              </button>
+            </div>
+
             <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-              <p className="text-sm font-medium text-slate-700 mb-2">Demo Accounts:</p>
+              <p className="text-sm font-medium text-slate-700 mb-2">Test Account:</p>
               <div className="space-y-1 text-xs text-slate-600">
-                <p><strong>BBT Admin:</strong> admin@bigbrandtire.com</p>
-                <p><strong>Seller:</strong> seller@techacq.com</p>
-                <p><strong>Seller Legal:</strong> legal@sellercorp.com</p>
-                <p><strong>RSM:</strong> viewer@rsm.com</p>
-                <p className="mt-2"><strong>Password:</strong> demo123</p>
+                <p><strong>Email:</strong> matthew.davis@bigbrandtire.com</p>
+                <p><strong>Password:</strong> password123</p>
               </div>
             </div>
           </CardContent>

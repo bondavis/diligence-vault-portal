@@ -1,21 +1,20 @@
 
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
-} from '@/components/ui/table';
-import { Search, Calendar, AlertCircle, FileText, Clock } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { RequestFilters } from './RequestFilters';
 import { RequestDetailModal } from './RequestDetailModal';
-import { useToast } from '@/hooks/use-toast';
+import { Clock, AlertCircle, CheckCircle, FileX } from 'lucide-react';
 
 interface DiligenceRequest {
   id: string;
@@ -25,44 +24,68 @@ interface DiligenceRequest {
   priority: 'high' | 'medium' | 'low';
   status: 'pending' | 'submitted' | 'approved' | 'rejected';
   due_date: string | null;
-  period_text: string | null;
   period_start: string | null;
   period_end: string | null;
-  created_at: string;
+  period_text: string | null;
   assigned_to: string | null;
+  created_at: string;
+  updated_at: string;
+  assignedUser?: {
+    name: string;
+    email: string;
+  };
   document_count?: number;
   has_response?: boolean;
+  computed_status?: string;
 }
 
 export const RequestManagementTable = () => {
   const [requests, setRequests] = useState<DiligenceRequest[]>([]);
-  const [filteredRequests, setFilteredRequests] = useState<DiligenceRequest[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedRequest, setSelectedRequest] = useState<DiligenceRequest | null>(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
+  const [filters, setFilters] = useState({
+    category: 'all',
+    priority: 'all',
+    status: 'all',
+    assigned: 'all'
+  });
+  
   const { toast } = useToast();
 
   useEffect(() => {
-    loadRequests();
+    loadData();
   }, []);
 
-  useEffect(() => {
-    filterRequests();
-  }, [requests, searchTerm]);
+  const computeRequestStatus = (request: DiligenceRequest) => {
+    const hasDocuments = (request.document_count || 0) > 0;
+    const hasResponse = request.has_response;
+    
+    if (request.status === 'approved') return 'Accepted';
+    if (hasDocuments || hasResponse) return 'Review Pending';
+    return 'Incomplete';
+  };
 
-  const loadRequests = async () => {
+  const loadData = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      
+      // Load requests with document counts and response status
+      const { data: requestsData, error: requestsError } = await supabase
         .from('diligence_requests')
-        .select('*')
+        .select(`
+          *,
+          request_documents!inner(count),
+          diligence_responses!inner(count)
+        `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (requestsError) throw requestsError;
 
       // Get document counts and response status for each request
       const requestsWithCounts = await Promise.all(
-        (data || []).map(async (request) => {
+        (requestsData || []).map(async (request) => {
           // Get document count
           const { count: docCount } = await supabase
             .from('request_documents')
@@ -76,29 +99,25 @@ export const RequestManagementTable = () => {
             .eq('request_id', request.id)
             .maybeSingle();
 
-          return {
+          const enrichedRequest = {
             ...request,
             document_count: docCount || 0,
             has_response: !!responseData
           };
+
+          return {
+            ...enrichedRequest,
+            computed_status: computeRequestStatus(enrichedRequest)
+          };
         })
       );
 
-      console.log('Loaded requests with period data:', requestsWithCounts.map(r => ({
-        id: r.id,
-        title: r.title,
-        period_text: r.period_text,
-        period_start: r.period_start,
-        period_end: r.period_end,
-        description: r.description?.substring(0, 100)
-      })));
-
       setRequests(requestsWithCounts);
     } catch (error) {
-      console.error('Error loading requests:', error);
+      console.error('Error loading data:', error);
       toast({
         title: "Error",
-        description: "Failed to load diligence requests",
+        description: "Failed to load requests",
         variant: "destructive",
       });
     } finally {
@@ -106,59 +125,33 @@ export const RequestManagementTable = () => {
     }
   };
 
-  const filterRequests = () => {
-    if (!searchTerm) {
-      setFilteredRequests(requests);
-      return;
-    }
+  const filteredRequests = requests.filter(request => {
+    const matchesSearch = searchQuery === '' || 
+      request.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (request.description && request.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const matchesCategory = filters.category === 'all' || filters.category === '' || request.category === filters.category;
+    const matchesPriority = filters.priority === 'all' || filters.priority === '' || request.priority === filters.priority;
+    const matchesStatus = filters.status === 'all' || filters.status === '' || request.status === filters.status;
+    const matchesAssigned = filters.assigned === 'all' || filters.assigned === '' || 
+      (filters.assigned === 'unassigned' && !request.assigned_to) ||
+      (filters.assigned === 'assigned' && request.assigned_to);
 
-    const filtered = requests.filter(request =>
-      request.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      request.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (request.description && request.description.toLowerCase().includes(searchTerm.toLowerCase()))
-    );
-    setFilteredRequests(filtered);
-  };
+    return matchesSearch && matchesCategory && matchesPriority && matchesStatus && matchesAssigned;
+  });
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800 border-red-200';
-      case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
-      case 'low': return 'bg-green-100 text-green-800 border-green-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800 border-green-200';
-      case 'submitted': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'rejected': return 'bg-red-100 text-red-800 border-red-200';
-      default: return 'bg-gray-100 text-gray-800 border-gray-200';
-    }
+  const handleRowClick = (requestId: string) => {
+    setSelectedRequestId(requestId);
+    setDetailModalOpen(true);
   };
 
   const formatPeriod = (request: DiligenceRequest) => {
-    // Priority order: period_text > formatted date range > extracted from description > fallback
+    // Priority: period_text > parsed description > period_start/end > "No period set"
     if (request.period_text) {
       return request.period_text;
     }
-    
-    if (request.period_start && request.period_end) {
-      const start = new Date(request.period_start).toLocaleDateString();
-      const end = new Date(request.period_end).toLocaleDateString();
-      return `${start} - ${end}`;
-    }
-    
-    if (request.period_start) {
-      return `From ${new Date(request.period_start).toLocaleDateString()}`;
-    }
-    
-    if (request.period_end) {
-      return `Until ${new Date(request.period_end).toLocaleDateString()}`;
-    }
 
-    // Try to extract period from description as fallback
+    // Try to extract from description
     if (request.description) {
       const desc = request.description.toLowerCase();
       if (desc.includes('last two years')) return 'Last 2 Years';
@@ -171,135 +164,149 @@ export const RequestManagementTable = () => {
       if (desc.includes('prior year')) return 'Prior Year';
       if (desc.includes('fiscal year')) return 'Fiscal Year';
     }
+
+    // Fallback to date range
+    if (request.period_start && request.period_end) {
+      const start = new Date(request.period_start);
+      const end = new Date(request.period_end);
+      const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+      const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+      const startYear = start.getFullYear();
+      const endYear = end.getFullYear();
+      
+      if (startYear === endYear) {
+        return `${startMonth} - ${endMonth} ${startYear}`;
+      } else {
+        return `${startMonth} ${startYear} - ${endMonth} ${endYear}`;
+      }
+    }
+    
+    if (request.period_start) {
+      return new Date(request.period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
+    
+    if (request.period_end) {
+      return `Until ${new Date(request.period_end).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+    }
     
     return 'No period specified';
   };
 
-  const getRequestStatus = (request: DiligenceRequest) => {
-    const hasDocuments = (request.document_count || 0) > 0;
-    const hasResponse = request.has_response;
-    
-    if (request.status === 'approved') return { label: 'Accepted', color: 'bg-green-100 text-green-800' };
-    if (hasDocuments || hasResponse) return { label: 'Review Pending', color: 'bg-blue-100 text-blue-800' };
-    return { label: 'Incomplete', color: 'bg-gray-100 text-gray-800' };
+  const getPriorityBadge = (priority: string) => {
+    switch (priority) {
+      case 'high': 
+        return <Badge className="bg-red-500 text-white hover:bg-red-600">HIGH</Badge>;
+      case 'medium': 
+        return <Badge className="bg-orange-500 text-white hover:bg-orange-600">MEDIUM</Badge>;
+      case 'low': 
+        return <Badge className="bg-green-500 text-white hover:bg-green-600">LOW</Badge>;
+      default: 
+        return <Badge variant="outline">{priority.toUpperCase()}</Badge>;
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'Incomplete': return <FileX className="h-4 w-4" />;
+      case 'Review Pending': return <AlertCircle className="h-4 w-4" />;
+      case 'Accepted': return <CheckCircle className="h-4 w-4" />;
+      default: return <Clock className="h-4 w-4" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'Incomplete': return 'bg-gray-100 text-gray-800';
+      case 'Review Pending': return 'bg-blue-100 text-blue-800';
+      case 'Accepted': return 'bg-green-100 text-green-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
   };
 
   if (loading) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Loading requests...</CardTitle>
-        </CardHeader>
-      </Card>
-    );
+    return <div className="p-6">Loading requests...</div>;
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Diligence Requests</CardTitle>
-            <div className="flex items-center space-x-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <Input
-                  placeholder="Search requests..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-64"
-                />
-              </div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="rounded-md border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Title</TableHead>
-                  <TableHead>Period</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Priority</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Due Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRequests.map((request) => {
-                  const status = getRequestStatus(request);
-                  const isOverdue = request.due_date && new Date(request.due_date) < new Date();
-                  
-                  return (
-                    <TableRow 
-                      key={request.id}
-                      className="cursor-pointer hover:bg-gray-50 transition-colors"
-                      onClick={() => setSelectedRequest(request)}
-                    >
-                      <TableCell className="font-medium">
-                        <div className="flex items-center space-x-2">
-                          <FileText className="h-4 w-4 text-gray-400" />
-                          <span>{request.title}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm">{formatPeriod(request)}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-xs">
-                          {request.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`text-xs ${getPriorityColor(request.priority)}`}>
-                          {request.priority}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge className={`text-xs ${status.color}`}>
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center space-x-2">
-                          {isOverdue && <AlertCircle className="h-4 w-4 text-red-500" />}
-                          <Clock className="h-4 w-4 text-gray-400" />
-                          <span className={`text-sm ${isOverdue ? 'text-red-600 font-medium' : ''}`}>
-                            {request.due_date 
-                              ? new Date(request.due_date).toLocaleDateString()
-                              : 'No due date'
-                            }
-                          </span>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-                {filteredRequests.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8 text-gray-500">
-                      No diligence requests found
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          </div>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      {/* Search and Filters */}
+      <div className="flex flex-col space-y-4">
+        <div className="flex items-center space-x-4">
+          <Input
+            placeholder="Search requests..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="max-w-sm"
+          />
+          <RequestFilters filters={filters} onFiltersChange={setFilters} />
+        </div>
+      </div>
 
-      {selectedRequest && (
-        <RequestDetailModal
-          request={selectedRequest}
-          isOpen={!!selectedRequest}
-          onClose={() => setSelectedRequest(null)}
-          onUpdate={loadRequests}
-        />
+      {/* Requests Table */}
+      <div className="border rounded-lg">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Title</TableHead>
+              <TableHead>Period</TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead>Priority</TableHead>
+              <TableHead>Status</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {filteredRequests.map((request) => (
+              <TableRow 
+                key={request.id}
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => handleRowClick(request.id)}
+              >
+                <TableCell>
+                  <div className="font-medium">{request.title}</div>
+                  {request.description && (
+                    <div className="text-sm text-gray-500 truncate max-w-xs">
+                      {request.description}
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm font-medium">
+                    {formatPeriod(request)}
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline">{request.category}</Badge>
+                </TableCell>
+                <TableCell>
+                  {getPriorityBadge(request.priority)}
+                </TableCell>
+                <TableCell>
+                  <Badge className={getStatusColor(request.computed_status || 'pending')}>
+                    <div className="flex items-center space-x-1">
+                      {getStatusIcon(request.computed_status || 'pending')}
+                      <span>{request.computed_status}</span>
+                    </div>
+                  </Badge>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </div>
+
+      {filteredRequests.length === 0 && (
+        <div className="text-center py-8 text-gray-500">
+          No requests found matching your criteria
+        </div>
       )}
-    </>
+
+      {/* Modal */}
+      <RequestDetailModal
+        open={detailModalOpen}
+        onOpenChange={setDetailModalOpen}
+        requestId={selectedRequestId}
+        onRequestUpdate={loadData}
+      />
+    </div>
   );
 };

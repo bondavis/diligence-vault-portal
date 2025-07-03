@@ -9,7 +9,7 @@ import { UserManagement } from '@/components/users/UserManagement';
 import { DealsOverview } from '@/components/deals/DealsOverview';
 import { DiligenceRequestUpload } from '@/components/upload/DiligenceRequestUpload';
 import { RequestManagementTable } from '@/components/admin/RequestManagementTable';
-import { CategoryProgressChart } from '@/components/admin/CategoryProgressChart';
+import { CategoryProgressCard } from '@/components/admin/CategoryProgressCard';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -187,8 +187,18 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
         </CardHeader>
       </Card>
 
-      {/* Key Stats - Removed Total Requests */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Overall Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card className="border-l-4 border-l-bb-red">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium text-bb-dark-gray">Total Requests</CardTitle>
+            <FileText className="h-4 w-4 text-bb-red" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-bb-dark-gray">{stats.totalRequests}</div>
+          </CardContent>
+        </Card>
+
         <Card className="border-l-4 border-l-amber-600">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium text-bb-dark-gray">Unassigned</CardTitle>
@@ -220,13 +230,21 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
         </Card>
       </div>
 
-      {/* Category Progress Chart */}
+      {/* Category Progress Cards */}
       {stats.categories.length > 0 && (
-        <CategoryProgressChart 
-          categories={stats.categories}
-          onCategoryClick={handleCategoryClick}
-          selectedCategory={selectedCategory}
-        />
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Category Progress</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {stats.categories.map((categoryStats) => (
+              <CategoryProgressCard
+                key={categoryStats.category}
+                stats={categoryStats}
+                onClick={handleCategoryClick}
+                isSelected={selectedCategory === categoryStats.category}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Management Tabs */}

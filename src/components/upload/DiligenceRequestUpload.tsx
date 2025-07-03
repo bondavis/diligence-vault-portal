@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,7 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 interface Deal {
   id: string;
   name: string;
-  code: string;
+  project_name: string;
+  company_name: string;
 }
 
 interface DiligenceRequestUploadProps {
@@ -37,7 +38,7 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
     try {
       const { data, error } = await (supabase as any)
         .from('deals')
-        .select('id, name, code')
+        .select('id, name, project_name, company_name')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -46,11 +47,15 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
       console.error('Error loading deals:', error);
       toast({
         title: "Error",
-        description: "Failed to load deals",
+        description: "Failed to load projects",
         variant: "destructive",
       });
     }
   };
+
+  useEffect(() => {
+    loadDeals();
+  }, []);
 
   const parseCSV = (csvText: string): any[] => {
     const lines = csvText.split('\n').filter(line => line.trim());
@@ -79,7 +84,7 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
     if (!file || !selectedDeal) {
       toast({
         title: "Missing Information",
-        description: "Please select a file and deal before uploading",
+        description: "Please select a file and project before uploading",
         variant: "destructive",
       });
       return;
@@ -160,11 +165,6 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
     URL.revokeObjectURL(url);
   };
 
-  // Load deals when component mounts
-  useState(() => {
-    loadDeals();
-  });
-
   return (
     <Card>
       <CardHeader>
@@ -194,15 +194,15 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
 
         {/* Deal Selection */}
         <div className="space-y-2">
-          <label className="text-sm font-medium">Select Deal</label>
+          <label className="text-sm font-medium">Select Project</label>
           <Select value={selectedDeal} onValueChange={setSelectedDeal}>
             <SelectTrigger>
-              <SelectValue placeholder="Choose a deal for these requests" />
+              <SelectValue placeholder="Choose a project for these requests" />
             </SelectTrigger>
             <SelectContent>
               {deals.map(deal => (
                 <SelectItem key={deal.id} value={deal.id}>
-                  {deal.name} ({deal.code})
+                  {deal.project_name} - {deal.company_name}
                 </SelectItem>
               ))}
             </SelectContent>

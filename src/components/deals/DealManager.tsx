@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -57,10 +56,10 @@ export const DealManager = () => {
   }, []);
 
   const createDeal = async () => {
-    if (!newDeal.name || !newDeal.project_name || !newDeal.company_name) {
+    if (!newDeal.name || !newDeal.project_name || !newDeal.company_name || !newDeal.target_close_date) {
       toast({
         title: "Missing Information",
-        description: "Please provide deal name, project name, and company name",
+        description: "Please provide project name, company name, and target close date",
         variant: "destructive",
       });
       return;
@@ -76,7 +75,7 @@ export const DealManager = () => {
           name: newDeal.name,
           project_name: newDeal.project_name,
           company_name: newDeal.company_name,
-          target_close_date: newDeal.target_close_date || null,
+          target_close_date: newDeal.target_close_date,
           created_by: userData.user?.id
         }])
         .select()
@@ -85,7 +84,7 @@ export const DealManager = () => {
       if (error) throw error;
 
       toast({
-        title: "Deal Created",
+        title: "Project Created",
         description: `${newDeal.name} has been created successfully`,
       });
 
@@ -94,10 +93,10 @@ export const DealManager = () => {
       loadDeals();
 
     } catch (error) {
-      console.error('Error creating deal:', error);
+      console.error('Error creating project:', error);
       toast({
         title: "Error",
-        description: "Failed to create deal",
+        description: "Failed to create project",
         variant: "destructive",
       });
     } finally {
@@ -109,7 +108,7 @@ export const DealManager = () => {
     return (
       <Card>
         <CardContent className="p-6">
-          <div className="text-center">Loading deals...</div>
+          <div className="text-center">Loading projects...</div>
         </CardContent>
       </Card>
     );
@@ -122,59 +121,53 @@ export const DealManager = () => {
           <div>
             <CardTitle className="flex items-center space-x-2">
               <Building className="h-5 w-5" />
-              <span>Deal Management</span>
+              <span>Project Management</span>
             </CardTitle>
-            <CardDescription>Create and manage M&A deals</CardDescription>
+            <CardDescription>Create and manage M&A projects</CardDescription>
           </div>
           <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
             <DialogTrigger asChild>
               <Button className="bg-bb-red hover:bg-red-700">
                 <Plus className="h-4 w-4 mr-2" />
-                New Deal
+                New Project
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create New Deal</DialogTitle>
+                <DialogTitle>Create New Project</DialogTitle>
                 <DialogDescription>
-                  Add a new M&A deal to the platform
+                  Add a new M&A project to the platform
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="deal-name">Deal Name</Label>
-                  <Input
-                    id="deal-name"
-                    placeholder="e.g., TechCorp Acquisition"
-                    value={newDeal.name}
-                    onChange={(e) => setNewDeal(prev => ({ ...prev, name: e.target.value }))}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project-name">Project Name</Label>
+                  <Label htmlFor="project-name">Project Name *</Label>
                   <Input
                     id="project-name"
                     placeholder="e.g., Project Alpha"
-                    value={newDeal.project_name}
-                    onChange={(e) => setNewDeal(prev => ({ ...prev, project_name: e.target.value }))}
+                    value={newDeal.name}
+                    onChange={(e) => setNewDeal(prev => ({ ...prev, name: e.target.value }))}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="company-name">Company Name</Label>
+                  <Label htmlFor="company-name">Company Name *</Label>
                   <Input
                     id="company-name"
                     placeholder="e.g., TechCorp Inc."
                     value={newDeal.company_name}
                     onChange={(e) => setNewDeal(prev => ({ ...prev, company_name: e.target.value }))}
+                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="target-close">Target Close Date (Optional)</Label>
+                  <Label htmlFor="target-close">Target Close Date *</Label>
                   <Input
                     id="target-close"
                     type="date"
                     value={newDeal.target_close_date}
                     onChange={(e) => setNewDeal(prev => ({ ...prev, target_close_date: e.target.value }))}
+                    required
                   />
                 </div>
                 <div className="flex space-x-2">
@@ -183,7 +176,7 @@ export const DealManager = () => {
                     disabled={creating}
                     className="bg-bb-red hover:bg-red-700"
                   >
-                    {creating ? 'Creating...' : 'Create Deal'}
+                    {creating ? 'Creating...' : 'Create Project'}
                   </Button>
                   <Button 
                     variant="outline" 
@@ -201,8 +194,8 @@ export const DealManager = () => {
         {deals.length === 0 ? (
           <div className="text-center py-8 text-gray-500">
             <Building className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-            <p>No deals created yet</p>
-            <p className="text-sm">Create your first deal to get started</p>
+            <p>No projects created yet</p>
+            <p className="text-sm">Create your first project to get started</p>
           </div>
         ) : (
           <div className="space-y-4">
@@ -211,7 +204,6 @@ export const DealManager = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h3 className="font-medium">{deal.name}</h3>
-                    <p className="text-sm text-gray-600">Project: {deal.project_name}</p>
                     <p className="text-sm text-gray-600">Company: {deal.company_name}</p>
                     {deal.target_close_date && (
                       <p className="text-xs text-gray-500 flex items-center mt-1">

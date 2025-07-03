@@ -2,16 +2,22 @@
 import { useState, useCallback } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Upload, X, File } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { Upload, X, File, CheckCircle } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
 interface FileUploadZoneProps {
   requestId: string;
+  onUploadComplete?: () => void;
 }
 
-export const FileUploadZone = ({ requestId }: FileUploadZoneProps) => {
+export const FileUploadZone = ({ requestId, onUploadComplete }: FileUploadZoneProps) => {
   const [files, setFiles] = useState<File[]>([]);
   const [isDragOver, setIsDragOver] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const { toast } = useToast();
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -43,16 +49,65 @@ export const FileUploadZone = ({ requestId }: FileUploadZoneProps) => {
   };
 
   const uploadFiles = async () => {
+    if (files.length === 0) return;
+
     setUploading(true);
-    // Here you would integrate with Box API
-    console.log('Uploading files for request:', requestId, files);
-    
-    // Simulate upload delay
-    setTimeout(() => {
+    setUploadProgress(0);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('User not authenticated');
+
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const fileExt = file.name.split('.').pop();
+        const fileName = `${requestId}/${Date.now()}_${file.name}`;
+
+        // Upload to Supabase Storage
+        const { error: uploadError } = await supabase.storage
+          .from('request-documents')
+          .upload(fileName, file);
+
+        if (uploadError) throw uploadError;
+
+        // Save document metadata to database
+        const { error: dbError } = await supabase
+          .from('request_documents')
+          .insert({
+            request_id: requestId,
+            filename: file.name,
+            file_size: file.size,
+            file_type: file.type,
+            storage_path: fileName,
+            uploaded_by: user.id,
+          });
+
+        if (dbError) throw dbError;
+
+        // Update progress
+        setUploadProgress(((i + 1) / files.length) * 100);
+      }
+
+      toast({
+        title: "Success",
+        description: `${files.length} file(s) uploaded successfully`,
+      });
+
+      setFiles([]);
+      if (onUploadComplete) {
+        onUploadComplete();
+      }
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      toast({
+        title: "Error",
+        description: "Failed to upload files",
+        variant: "destructive",
+      });
+    } finally {
       setUploading(false);
-      // In real implementation, clear files after successful upload
-      // setFiles([]);
-    }, 2000);
+      setUploadProgress(0);
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -83,7 +138,7 @@ export const FileUploadZone = ({ requestId }: FileUploadZoneProps) => {
               Drop files here or click to browse
             </p>
             <p className="text-sm text-gray-600">
-              Supports PDF, DOC, DOCX, XLS, XLSX files up to 50MB each
+              Supports PDF, DOC, DOCX, XLS, XLSX, images up to 50MB each
             </p>
           </div>
           <input
@@ -122,6 +177,7 @@ export const FileUploadZone = ({ requestId }: FileUploadZoneProps) => {
                   size="sm"
                   onClick={() => removeFile(index)}
                   className="text-red-600 hover:text-red-800"
+                  disabled={uploading}
                 >
                   <X className="h-4 w-4" />
                 </Button>
@@ -129,20 +185,39 @@ export const FileUploadZone = ({ requestId }: FileUploadZoneProps) => {
             ))}
           </div>
           
+          {uploading && (
+            <div className="space-y-2">
+              <Progress value={uploadProgress} className="w-full" />
+              <p className="text-sm text-gray-600 text-center">
+                Uploading... {Math.round(uploadProgress)}%
+              </p>
+            </div>
+          )}
+          
           <Button 
             onClick={uploadFiles} 
             disabled={uploading}
             className="w-full mt-4"
           >
-            {uploading ? 'Uploading to Box...' : `Upload ${files.length} File${files.length !== 1 ? 's' : ''}`}
+            {uploading ? (
+              <>
+                <Upload className="h-4 w-4 mr-2 animate-spin" />
+                Uploading...
+              </>
+            ) : (
+              <>
+                <Upload className="h-4 w-4 mr-2" />
+                Upload {files.length} File{files.length !== 1 ? 's' : ''}
+              </>
+            )}
           </Button>
         </div>
       )}
 
       {/* Upload Note */}
-      <div className="text-xs text-gray-500 bg-yellow-50 p-3 rounded-lg">
-        <strong>Note:</strong> Files will be uploaded directly to your deal's Box folder. 
-        Box API integration required - please configure your API keys in the admin settings.
+      <div className="text-xs text-gray-500 bg-blue-50 p-3 rounded-lg">
+        <strong>Note:</strong> Files are uploaded to secure storage and will be available for download. 
+        Box integration can be configured to automatically sync files to your deal folders.
       </div>
     </div>
   );

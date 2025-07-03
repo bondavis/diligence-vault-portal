@@ -54,6 +54,8 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          period_end: string | null
+          period_start: string | null
           priority: Database["public"]["Enums"]["request_priority"]
           status: Database["public"]["Enums"]["request_status"]
           title: string
@@ -70,6 +72,8 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          period_end?: string | null
+          period_start?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
           status?: Database["public"]["Enums"]["request_status"]
           title: string
@@ -86,6 +90,8 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          period_end?: string | null
+          period_start?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
           status?: Database["public"]["Enums"]["request_status"]
           title?: string
@@ -165,6 +171,56 @@ export type Database = {
           role?: string
         }
         Relationships: []
+      }
+      request_documents: {
+        Row: {
+          box_file_id: string | null
+          box_folder_id: string | null
+          file_size: number
+          file_type: string
+          filename: string
+          id: string
+          is_sample_document: boolean
+          request_id: string
+          storage_path: string
+          uploaded_at: string
+          uploaded_by: string
+        }
+        Insert: {
+          box_file_id?: string | null
+          box_folder_id?: string | null
+          file_size: number
+          file_type: string
+          filename: string
+          id?: string
+          is_sample_document?: boolean
+          request_id: string
+          storage_path: string
+          uploaded_at?: string
+          uploaded_by: string
+        }
+        Update: {
+          box_file_id?: string | null
+          box_folder_id?: string | null
+          file_size?: number
+          file_type?: string
+          filename?: string
+          id?: string
+          is_sample_document?: boolean
+          request_id?: string
+          storage_path?: string
+          uploaded_at?: string
+          uploaded_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "request_documents_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "diligence_requests"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

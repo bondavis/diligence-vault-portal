@@ -27,6 +27,8 @@ interface DiligenceRequest {
   priority: 'high' | 'medium' | 'low';
   status: 'pending' | 'submitted' | 'approved' | 'rejected';
   due_date: string | null;
+  period_start: string | null;
+  period_end: string | null;
   assigned_to: string | null;
   created_at: string;
   updated_at: string;
@@ -138,6 +140,36 @@ export const RequestManagementTable = () => {
     );
   };
 
+  const handleRowClick = (requestId: string) => {
+    setSelectedRequestId(requestId);
+    setDetailModalOpen(true);
+  };
+
+  const formatPeriod = (startDate: string | null, endDate: string | null) => {
+    if (!startDate && !endDate) return 'No period set';
+    
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+    
+    if (start && end) {
+      const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
+      const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
+      const startYear = start.getFullYear();
+      const endYear = end.getFullYear();
+      
+      if (startYear === endYear) {
+        return `${startMonth} - ${endMonth} ${startYear}`;
+      } else {
+        return `${startMonth} ${startYear} - ${endMonth} ${endYear}`;
+      }
+    }
+    
+    if (start) return start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    if (end) return `Until ${end.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+    
+    return 'Period not set';
+  };
+
   const getPriorityColor = (priority: string) => {
     switch (priority) {
       case 'high': return 'bg-red-100 text-red-800';
@@ -236,18 +268,22 @@ export const RequestManagementTable = () => {
                 />
               </TableHead>
               <TableHead>Title</TableHead>
+              <TableHead>Period</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Assigned To</TableHead>
-              <TableHead>Due Date</TableHead>
+              <TableHead>Assignment</TableHead>
               <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredRequests.map((request) => (
-              <TableRow key={request.id}>
-                <TableCell>
+              <TableRow 
+                key={request.id}
+                className="cursor-pointer hover:bg-gray-50 transition-colors"
+                onClick={() => handleRowClick(request.id)}
+              >
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <input
                     type="checkbox"
                     checked={selectedRequests.includes(request.id)}
@@ -262,6 +298,11 @@ export const RequestManagementTable = () => {
                       {request.description}
                     </div>
                   )}
+                </TableCell>
+                <TableCell>
+                  <div className="text-sm">
+                    {formatPeriod(request.period_start, request.period_end)}
+                  </div>
                 </TableCell>
                 <TableCell>
                   <Badge variant="outline">{request.category}</Badge>
@@ -291,18 +332,7 @@ export const RequestManagementTable = () => {
                     </Badge>
                   )}
                 </TableCell>
-                <TableCell>
-                  {request.due_date ? (
-                    <div className={`text-sm ${
-                      new Date(request.due_date) < new Date() ? 'text-red-600 font-medium' : ''
-                    }`}>
-                      {new Date(request.due_date).toLocaleDateString()}
-                    </div>
-                  ) : (
-                    <span className="text-gray-400">No due date</span>
-                  )}
-                </TableCell>
-                <TableCell>
+                <TableCell onClick={(e) => e.stopPropagation()}>
                   <div className="flex space-x-2">
                     <Button
                       variant="ghost"
@@ -354,6 +384,7 @@ export const RequestManagementTable = () => {
         open={detailModalOpen}
         onOpenChange={setDetailModalOpen}
         requestId={selectedRequestId}
+        onRequestUpdate={loadData}
       />
     </div>
   );

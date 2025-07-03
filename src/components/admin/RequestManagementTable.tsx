@@ -11,12 +11,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RequestFilters } from './RequestFilters';
-import { RequestAssignmentModal } from './RequestAssignmentModal';
 import { RequestDetailModal } from './RequestDetailModal';
-import { Eye, UserPlus, Clock, AlertCircle, CheckCircle, FileX, FileCheck } from 'lucide-react';
+import { Clock, AlertCircle, CheckCircle, FileX } from 'lucide-react';
 
 interface DiligenceRequest {
   id: string;
@@ -28,6 +26,7 @@ interface DiligenceRequest {
   due_date: string | null;
   period_start: string | null;
   period_end: string | null;
+  period_text: string | null;
   assigned_to: string | null;
   created_at: string;
   updated_at: string;
@@ -40,18 +39,10 @@ interface DiligenceRequest {
   computed_status?: string;
 }
 
-interface User {
-  id: string;
-  name: string;
-  email: string;
-}
-
 export const RequestManagementTable = () => {
   const [requests, setRequests] = useState<DiligenceRequest[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [filters, setFilters] = useState({
@@ -92,17 +83,6 @@ export const RequestManagementTable = () => {
 
       if (requestsError) throw requestsError;
 
-      // Load all users for assignment and to match with assigned_to
-      const { data: usersData, error: usersError } = await supabase
-        .from('profiles')
-        .select('id, name, email')
-        .order('name');
-
-      if (usersError) throw usersError;
-
-      // Create a map of users for quick lookup
-      const userMap = new Map(usersData?.map(user => [user.id, user]) || []);
-
       // Get document counts and response status for each request
       const requestsWithCounts = await Promise.all(
         (requestsData || []).map(async (request) => {
@@ -121,7 +101,6 @@ export const RequestManagementTable = () => {
 
           const enrichedRequest = {
             ...request,
-            assignedUser: request.assigned_to ? userMap.get(request.assigned_to) : undefined,
             document_count: docCount || 0,
             has_response: !!responseData
           };
@@ -134,7 +113,6 @@ export const RequestManagementTable = () => {
       );
 
       setRequests(requestsWithCounts);
-      setUsers(usersData || []);
     } catch (error) {
       console.error('Error loading data:', error);
       toast({
@@ -167,13 +145,30 @@ export const RequestManagementTable = () => {
     setDetailModalOpen(true);
   };
 
-  const formatPeriod = (startDate: string | null, endDate: string | null) => {
-    if (!startDate && !endDate) return 'No period set';
-    
-    const start = startDate ? new Date(startDate) : null;
-    const end = endDate ? new Date(endDate) : null;
-    
-    if (start && end) {
+  const formatPeriod = (request: DiligenceRequest) => {
+    // Priority: period_text > parsed description > period_start/end > "No period set"
+    if (request.period_text) {
+      return request.period_text;
+    }
+
+    // Try to extract from description
+    if (request.description) {
+      const desc = request.description.toLowerCase();
+      if (desc.includes('last two years')) return 'Last 2 Years';
+      if (desc.includes('thirteen months')) return '13 Months';
+      if (desc.includes('historical period')) return 'Historical Period';
+      if (desc.includes('monthly')) return 'Monthly';
+      if (desc.includes('quarterly')) return 'Quarterly';
+      if (desc.includes('annual') || desc.includes('yearly')) return 'Annual';
+      if (desc.includes('current year')) return 'Current Year';
+      if (desc.includes('prior year')) return 'Prior Year';
+      if (desc.includes('fiscal year')) return 'Fiscal Year';
+    }
+
+    // Fallback to date range
+    if (request.period_start && request.period_end) {
+      const start = new Date(request.period_start);
+      const end = new Date(request.period_end);
       const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
       const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
       const startYear = start.getFullYear();
@@ -186,10 +181,15 @@ export const RequestManagementTable = () => {
       }
     }
     
-    if (start) return start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    if (end) return `Until ${end.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+    if (request.period_start) {
+      return new Date(request.period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
     
-    return 'Period not set';
+    if (request.period_end) {
+      return `Until ${new Date(request.period_end).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+    }
+    
+    return 'No period specified';
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -242,32 +242,6 @@ export const RequestManagementTable = () => {
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <div className="text-2xl font-bold text-blue-600">{requests.length}</div>
-          <div className="text-sm text-blue-600">Total Requests</div>
-        </div>
-        <div className="bg-amber-50 p-4 rounded-lg">
-          <div className="text-2xl font-bold text-amber-600">
-            {requests.filter(r => !r.assigned_to).length}
-          </div>
-          <div className="text-sm text-amber-600">Unassigned</div>
-        </div>
-        <div className="bg-green-50 p-4 rounded-lg">
-          <div className="text-2xl font-bold text-green-600">
-            {requests.filter(r => r.computed_status === 'Accepted').length}
-          </div>
-          <div className="text-sm text-green-600">Accepted</div>
-        </div>
-        <div className="bg-red-50 p-4 rounded-lg">
-          <div className="text-2xl font-bold text-red-600">
-            {requests.filter(r => r.due_date && new Date(r.due_date) < new Date()).length}
-          </div>
-          <div className="text-sm text-red-600">Overdue</div>
-        </div>
-      </div>
-
       {/* Requests Table */}
       <div className="border rounded-lg">
         <Table>
@@ -278,8 +252,6 @@ export const RequestManagementTable = () => {
               <TableHead>Category</TableHead>
               <TableHead>Priority</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead>Assignment</TableHead>
-              <TableHead>Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -298,8 +270,8 @@ export const RequestManagementTable = () => {
                   )}
                 </TableCell>
                 <TableCell>
-                  <div className="text-sm">
-                    {formatPeriod(request.period_start, request.period_end)}
+                  <div className="text-sm font-medium">
+                    {formatPeriod(request)}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -316,42 +288,6 @@ export const RequestManagementTable = () => {
                     </div>
                   </Badge>
                 </TableCell>
-                <TableCell>
-                  {request.assignedUser ? (
-                    <div className="text-sm">
-                      <div className="font-medium">{request.assignedUser.name}</div>
-                      <div className="text-gray-500">{request.assignedUser.email}</div>
-                    </div>
-                  ) : (
-                    <Badge variant="outline" className="text-amber-600">
-                      Unassigned
-                    </Badge>
-                  )}
-                </TableCell>
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <div className="flex space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedRequestId(request.id);
-                        setDetailModalOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedRequestId(request.id);
-                        setAssignmentModalOpen(true);
-                      }}
-                    >
-                      <UserPlus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -364,18 +300,7 @@ export const RequestManagementTable = () => {
         </div>
       )}
 
-      {/* Modals */}
-      <RequestAssignmentModal
-        open={assignmentModalOpen}
-        onOpenChange={setAssignmentModalOpen}
-        requestId={selectedRequestId}
-        users={users}
-        onAssignmentComplete={() => {
-          setAssignmentModalOpen(false);
-          loadData();
-        }}
-      />
-
+      {/* Modal */}
       <RequestDetailModal
         open={detailModalOpen}
         onOpenChange={setDetailModalOpen}

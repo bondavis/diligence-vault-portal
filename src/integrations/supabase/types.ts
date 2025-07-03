@@ -56,6 +56,7 @@ export type Database = {
           id: string
           period_end: string | null
           period_start: string | null
+          period_text: string | null
           priority: Database["public"]["Enums"]["request_priority"]
           status: Database["public"]["Enums"]["request_status"]
           title: string
@@ -74,6 +75,7 @@ export type Database = {
           id?: string
           period_end?: string | null
           period_start?: string | null
+          period_text?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
           status?: Database["public"]["Enums"]["request_status"]
           title: string
@@ -92,6 +94,7 @@ export type Database = {
           id?: string
           period_end?: string | null
           period_start?: string | null
+          period_text?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
           status?: Database["public"]["Enums"]["request_status"]
           title?: string

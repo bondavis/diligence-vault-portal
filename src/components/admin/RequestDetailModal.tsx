@@ -160,13 +160,30 @@ export const RequestDetailModal = ({
     }
   };
 
-  const formatPeriod = (startDate: string | null, endDate: string | null) => {
-    if (!startDate && !endDate) return 'No period set';
-    
-    const start = startDate ? new Date(startDate) : null;
-    const end = endDate ? new Date(endDate) : null;
-    
-    if (start && end) {
+  const formatPeriod = (request: any) => {
+    // Priority: period_text > parsed description > period_start/end > "No period set"
+    if (request.period_text) {
+      return request.period_text;
+    }
+
+    // Try to extract from description
+    if (request.description) {
+      const desc = request.description.toLowerCase();
+      if (desc.includes('last two years')) return 'Last 2 Years';
+      if (desc.includes('thirteen months')) return '13 Months';
+      if (desc.includes('historical period')) return 'Historical Period';
+      if (desc.includes('monthly')) return 'Monthly';
+      if (desc.includes('quarterly')) return 'Quarterly';
+      if (desc.includes('annual') || desc.includes('yearly')) return 'Annual';
+      if (desc.includes('current year')) return 'Current Year';
+      if (desc.includes('prior year')) return 'Prior Year';
+      if (desc.includes('fiscal year')) return 'Fiscal Year';
+    }
+
+    // Fallback to date range
+    if (request.period_start && request.period_end) {
+      const start = new Date(request.period_start);
+      const end = new Date(request.period_end);
       const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
       const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
       const startYear = start.getFullYear();
@@ -179,10 +196,15 @@ export const RequestDetailModal = ({
       }
     }
     
-    if (start) return start.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
-    if (end) return `Until ${end.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+    if (request.period_start) {
+      return new Date(request.period_start).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    }
     
-    return 'Period not set';
+    if (request.period_end) {
+      return `Until ${new Date(request.period_end).toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}`;
+    }
+    
+    return 'No period specified';
   };
 
   const getPriorityBadge = (priority: string) => {
@@ -255,7 +277,7 @@ export const RequestDetailModal = ({
             <div className="flex items-center space-x-2 text-lg">
               <Calendar className="h-5 w-5 text-gray-500" />
               <span className="font-medium text-gray-900">
-                {formatPeriod(request.period_start, request.period_end)}
+                {formatPeriod(request)}
               </span>
             </div>
 

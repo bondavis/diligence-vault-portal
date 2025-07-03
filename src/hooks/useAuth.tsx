@@ -39,7 +39,12 @@ export const useAuth = () => {
               if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching profile:', error);
               } else if (profileData) {
-                setProfile(profileData);
+                // Type cast the role to ensure it matches our expected type
+                const typedProfile: Profile = {
+                  ...profileData,
+                  role: profileData.role as 'view_only' | 'upload_only' | 'admin'
+                };
+                setProfile(typedProfile);
               }
             } catch (error) {
               console.error('Error in profile fetch:', error);

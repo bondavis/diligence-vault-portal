@@ -10,20 +10,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileText, Upload, Download, Calendar, AlertCircle, CheckCircle, Clock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { Database } from '@/integrations/supabase/types';
 
-interface DiligenceRequest {
-  id: string;
-  title: string;
-  description: string | null;
-  category: string;
-  priority: 'high' | 'medium' | 'low';
-  status: 'pending' | 'submitted' | 'approved' | 'rejected';
-  due_date: string | null;
-  created_at: string;
-  allow_file_upload: boolean;
-  allow_text_response: boolean;
-  period_text: string | null;
-}
+type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'];
+type RequestStatus = Database['public']['Enums']['request_status'];
+type RequestPriority = Database['public']['Enums']['request_priority'];
+type RequestCategory = Database['public']['Enums']['request_category'];
 
 interface RequestDetailModalProps {
   request: DiligenceRequest | null;
@@ -38,7 +30,13 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [editData, setEditData] = useState<Partial<DiligenceRequest>>({});
+  const [editData, setEditData] = useState<{
+    title?: string;
+    description?: string | null;
+    priority?: RequestPriority;
+    due_date?: string | null;
+    period_text?: string | null;
+  }>({});
   const { toast } = useToast();
 
   useEffect(() => {
@@ -145,7 +143,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
     }
   };
 
-  const handleStatusChange = async (newStatus: string) => {
+  const handleStatusChange = async (newStatus: RequestStatus) => {
     if (!request || !isAdmin) return;
 
     try {
@@ -175,7 +173,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
     }
   };
 
-  const getPriorityBadge = (priority: string) => {
+  const getPriorityBadge = (priority: RequestPriority) => {
     switch (priority) {
       case 'high': 
         return <Badge className="bg-red-500 text-white">HIGH</Badge>;
@@ -188,7 +186,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
     }
   };
 
-  const getStatusIcon = (status: string) => {
+  const getStatusIcon = (status: RequestStatus) => {
     switch (status) {
       case 'pending': return <Clock className="h-4 w-4" />;
       case 'submitted': return <AlertCircle className="h-4 w-4" />;
@@ -260,7 +258,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
                 </div>
                 <div>
                   <Label htmlFor="edit-priority">Priority</Label>
-                  <Select value={editData.priority} onValueChange={(value) => setEditData({ ...editData, priority: value as any })}>
+                  <Select value={editData.priority} onValueChange={(value: RequestPriority) => setEditData({ ...editData, priority: value })}>
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>

@@ -187,7 +187,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
       case 'low': 
         return <Badge className="bg-green-500 text-white hover:bg-green-600">LOW</Badge>;
       default: 
-        return <Badge variant="outline">{priority.toUpperCase()}</Badge>;
+        return <Badge variant="outline">{String(priority).toUpperCase()}</Badge>;
     }
   };
 

@@ -1,4 +1,5 @@
 
+
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
@@ -46,10 +47,10 @@ export const useAuth = () => {
                   email: profileData.email,
                   name: profileData.name,
                   role: profileData.role as Profile['role'],
-                  organization: profileData.organization,
-                  deal_id: profileData.deal_id,
+                  organization: (profileData as any).organization || undefined,
+                  deal_id: (profileData as any).deal_id || undefined,
                   created_at: profileData.created_at,
-                  last_active: profileData.last_active
+                  last_active: (profileData as any).last_active || undefined
                 };
                 setProfile(typedProfile);
               }
@@ -94,3 +95,4 @@ export const useAuth = () => {
     signOut,
   };
 };
+

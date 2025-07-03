@@ -7,7 +7,8 @@ interface Profile {
   id: string;
   email: string;
   name: string;
-  role: 'view_only' | 'upload_only' | 'admin';
+  role: 'bbt_execution_team' | 'bbt_operations' | 'bbt_finance' | 'bbt_legal' | 'bbt_exec' | 'seller' | 'seller_legal' | 'seller_financial' | 'rsm' | 'hensen_efron';
+  organization?: string;
   deal_id?: string;
   created_at: string;
   last_active?: string;
@@ -39,12 +40,7 @@ export const useAuth = () => {
               if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching profile:', error);
               } else if (profileData) {
-                // Type cast the role to ensure it matches our expected type
-                const typedProfile: Profile = {
-                  ...profileData,
-                  role: profileData.role as 'view_only' | 'upload_only' | 'admin'
-                };
-                setProfile(typedProfile);
+                setProfile(profileData);
               }
             } catch (error) {
               console.error('Error in profile fetch:', error);

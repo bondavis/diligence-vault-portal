@@ -6,57 +6,75 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Search, Mail, Shield } from 'lucide-react';
+import { Plus, Search, Mail, Shield, Users, Building } from 'lucide-react';
 import { User, UserRole } from '@/pages/Index';
 
 export const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [orgFilter, setOrgFilter] = useState<string>('all');
 
-  // Mock users data
+  // Mock users data with new role structure
   const users: (User & { dealName?: string; lastActive: string })[] = [
     {
       id: '1',
-      email: 'admin@madiligence.com',
+      email: 'admin@bigbrandtire.com',
       name: 'Sarah Chen',
-      role: 'admin',
+      role: 'bbt_execution_team',
+      organization: 'BBT',
       lastActive: '2024-01-15'
     },
     {
       id: '2',
-      email: 'seller@techacq.com',
+      email: 'operations@bigbrandtire.com',
       name: 'Michael Torres',
-      role: 'upload_only',
-      dealId: 'deal-1',
-      dealName: 'TechCorp Acquisition',
+      role: 'bbt_operations',
+      organization: 'BBT',
       lastActive: '2024-01-14'
     },
     {
       id: '3',
-      email: 'legal@lawfirm.com',
+      email: 'legal@bigbrandtire.com',
       name: 'Jennifer Walsh',
-      role: 'upload_only',
-      dealId: 'deal-1',
-      dealName: 'TechCorp Acquisition',
+      role: 'bbt_legal',
+      organization: 'BBT',
       lastActive: '2024-01-13'
     },
     {
       id: '4',
-      email: 'viewer@investor.com',
+      email: 'seller@techacq.com',
       name: 'David Kim',
-      role: 'view_only',
+      role: 'seller',
+      organization: 'Seller',
       dealId: 'deal-1',
       dealName: 'TechCorp Acquisition',
       lastActive: '2024-01-12'
     },
     {
       id: '5',
-      email: 'cpa@accounting.com',
+      email: 'legal@sellercorp.com',
       name: 'Lisa Rodriguez',
-      role: 'upload_only',
-      dealId: 'deal-2',
-      dealName: 'HealthTech Merger',
+      role: 'seller_legal',
+      organization: 'Seller',
+      dealId: 'deal-1',
+      dealName: 'TechCorp Acquisition',
       lastActive: '2024-01-11'
+    },
+    {
+      id: '6',
+      email: 'analyst@rsm.com',
+      name: 'Robert Johnson',
+      role: 'rsm',
+      organization: 'RSM',
+      lastActive: '2024-01-10'
+    },
+    {
+      id: '7',
+      email: 'partner@hensen-efron.com',
+      name: 'Amanda Clark',
+      role: 'hensen_efron',
+      organization: 'Hensen & Efron',
+      lastActive: '2024-01-09'
     }
   ];
 
@@ -64,25 +82,47 @@ export const UserManagement = () => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
-    return matchesSearch && matchesRole;
+    const matchesOrg = orgFilter === 'all' || user.organization === orgFilter;
+    return matchesSearch && matchesRole && matchesOrg;
   });
 
   const getRoleColor = (role: UserRole) => {
     switch (role) {
-      case 'admin': return 'bg-red-100 text-red-800';
-      case 'upload_only': return 'bg-blue-100 text-blue-800';
-      case 'view_only': return 'bg-gray-100 text-gray-800';
+      case 'bbt_execution_team': return 'bg-red-100 text-red-800';
+      case 'bbt_operations':
+      case 'bbt_finance':
+      case 'bbt_legal':
+      case 'bbt_exec': return 'bg-blue-100 text-blue-800';
+      case 'seller':
+      case 'seller_legal':
+      case 'seller_financial': return 'bg-green-100 text-green-800';
+      case 'rsm': return 'bg-purple-100 text-purple-800';
+      case 'hensen_efron': return 'bg-orange-100 text-orange-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
 
   const getRoleIcon = (role: UserRole) => {
-    switch (role) {
-      case 'admin': return <Shield className="h-3 w-3" />;
-      case 'upload_only': return <Mail className="h-3 w-3" />;
-      case 'view_only': return <Search className="h-3 w-3" />;
-      default: return <Mail className="h-3 w-3" />;
-    }
+    if (role === 'bbt_execution_team') return <Shield className="h-3 w-3" />;
+    if (role.startsWith('bbt_')) return <Building className="h-3 w-3" />;
+    if (role.startsWith('seller')) return <Users className="h-3 w-3" />;
+    return <Mail className="h-3 w-3" />;
+  };
+
+  const getRoleDisplayName = (role: UserRole): string => {
+    const roleMap: Record<UserRole, string> = {
+      bbt_execution_team: 'BBT Execution Team',
+      bbt_operations: 'BBT Operations',
+      bbt_finance: 'BBT Finance',
+      bbt_legal: 'BBT Legal',
+      bbt_exec: 'BBT Executive',
+      seller: 'Seller',
+      seller_legal: 'Seller Legal',
+      seller_financial: 'Seller Financial',
+      rsm: 'RSM',
+      hensen_efron: 'Hensen & Efron'
+    };
+    return roleMap[role] || role;
   };
 
   return (
@@ -94,10 +134,16 @@ export const UserManagement = () => {
               <CardTitle>User Management</CardTitle>
               <CardDescription>Manage user access and permissions across all deals</CardDescription>
             </div>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add User
-            </Button>
+            <div className="flex space-x-2">
+              <Button variant="outline">
+                <Plus className="h-4 w-4 mr-2" />
+                Invite BBT/Affiliate User
+              </Button>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Invite Seller User
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -111,15 +157,34 @@ export const UserManagement = () => {
                 className="max-w-sm"
               />
             </div>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <Select value={orgFilter} onValueChange={setOrgFilter}>
               <SelectTrigger className="w-40">
+                <SelectValue placeholder="Filter by org" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Organizations</SelectItem>
+                <SelectItem value="BBT">BBT</SelectItem>
+                <SelectItem value="Seller">Seller</SelectItem>
+                <SelectItem value="RSM">RSM</SelectItem>
+                <SelectItem value="Hensen & Efron">Hensen & Efron</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="w-48">
                 <SelectValue placeholder="Filter by role" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Roles</SelectItem>
-                <SelectItem value="admin">Admin</SelectItem>
-                <SelectItem value="upload_only">Upload Only</SelectItem>
-                <SelectItem value="view_only">View Only</SelectItem>
+                <SelectItem value="bbt_execution_team">BBT Execution Team</SelectItem>
+                <SelectItem value="bbt_operations">BBT Operations</SelectItem>
+                <SelectItem value="bbt_finance">BBT Finance</SelectItem>
+                <SelectItem value="bbt_legal">BBT Legal</SelectItem>
+                <SelectItem value="bbt_exec">BBT Executive</SelectItem>
+                <SelectItem value="seller">Seller</SelectItem>
+                <SelectItem value="seller_legal">Seller Legal</SelectItem>
+                <SelectItem value="seller_financial">Seller Financial</SelectItem>
+                <SelectItem value="rsm">RSM</SelectItem>
+                <SelectItem value="hensen_efron">Hensen & Efron</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -130,6 +195,7 @@ export const UserManagement = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>User</TableHead>
+                  <TableHead>Organization</TableHead>
                   <TableHead>Role</TableHead>
                   <TableHead>Assigned Deal</TableHead>
                   <TableHead>Last Active</TableHead>
@@ -146,10 +212,15 @@ export const UserManagement = () => {
                       </div>
                     </TableCell>
                     <TableCell>
+                      <Badge variant="secondary" className="font-medium">
+                        {user.organization}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
                       <Badge variant="outline" className={getRoleColor(user.role)}>
                         <div className="flex items-center space-x-1">
                           {getRoleIcon(user.role)}
-                          <span className="capitalize">{user.role.replace('_', ' ')}</span>
+                          <span>{getRoleDisplayName(user.role)}</span>
                         </div>
                       </Badge>
                     </TableCell>

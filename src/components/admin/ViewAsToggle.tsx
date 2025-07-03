@@ -13,9 +13,16 @@ interface ViewAsToggleProps {
 
 export const ViewAsToggle = ({ currentRole, onRoleChange }: ViewAsToggleProps) => {
   const roleOptions = [
-    { value: 'admin' as const, label: 'Admin', description: 'Full access to all features' },
-    { value: 'upload_only' as const, label: 'Upload Only', description: 'Can upload files and respond to requests' },
-    { value: 'view_only' as const, label: 'View Only', description: 'Can only view assigned requests' }
+    { value: 'bbt_execution_team' as const, label: 'BBT Execution Team', description: 'Full admin access to all features', organization: 'BBT' },
+    { value: 'bbt_operations' as const, label: 'BBT Operations', description: 'BBT operations team access', organization: 'BBT' },
+    { value: 'bbt_finance' as const, label: 'BBT Finance', description: 'BBT finance team access', organization: 'BBT' },
+    { value: 'bbt_legal' as const, label: 'BBT Legal', description: 'BBT legal team access', organization: 'BBT' },
+    { value: 'bbt_exec' as const, label: 'BBT Executive', description: 'BBT executive team access', organization: 'BBT' },
+    { value: 'seller' as const, label: 'Seller', description: 'Seller access to assigned deals', organization: 'Seller' },
+    { value: 'seller_legal' as const, label: 'Seller Legal', description: 'Seller legal team access', organization: 'Seller' },
+    { value: 'seller_financial' as const, label: 'Seller Financial', description: 'Seller financial team access', organization: 'Seller' },
+    { value: 'rsm' as const, label: 'RSM', description: 'RSM team access', organization: 'RSM' },
+    { value: 'hensen_efron' as const, label: 'Hensen & Efron', description: 'Hensen & Efron team access', organization: 'Hensen & Efron' }
   ];
 
   const currentRoleInfo = roleOptions.find(option => option.value === currentRole);
@@ -38,13 +45,16 @@ export const ViewAsToggle = ({ currentRole, onRoleChange }: ViewAsToggleProps) =
           <div className="flex items-center space-x-3">
             <span className="text-xs text-amber-700">{currentRoleInfo?.description}</span>
             <Select value={currentRole} onValueChange={onRoleChange}>
-              <SelectTrigger className="w-[140px] h-8 bg-white border-amber-300">
+              <SelectTrigger className="w-[180px] h-8 bg-white border-amber-300">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {roleOptions.map((option) => (
                   <SelectItem key={option.value} value={option.value}>
-                    {option.label}
+                    <div className="flex flex-col">
+                      <span>{option.label}</span>
+                      <span className="text-xs text-muted-foreground">{option.organization}</span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>

@@ -17,7 +17,10 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
             <div>
               <CardTitle className="text-2xl">Admin Dashboard</CardTitle>
               <CardDescription className="text-red-100">
-                Manage deals, templates, and users
+                {user.role === 'bbt_execution_team' 
+                  ? 'Full administrative access - manage deals, templates, and users'
+                  : 'Administrative access for BBT team members'
+                }
               </CardDescription>
             </div>
           </div>

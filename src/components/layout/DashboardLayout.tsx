@@ -20,11 +20,32 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
     await signOut();
   };
 
+  // Helper function to get role display name
+  const getRoleDisplayName = (role: UserRole): string => {
+    const roleMap: Record<UserRole, string> = {
+      bbt_execution_team: 'BBT Execution Team',
+      bbt_operations: 'BBT Operations',
+      bbt_finance: 'BBT Finance',
+      bbt_legal: 'BBT Legal',
+      bbt_exec: 'BBT Executive',
+      seller: 'Seller',
+      seller_legal: 'Seller Legal',
+      seller_financial: 'Seller Financial',
+      rsm: 'RSM',
+      hensen_efron: 'Hensen & Efron'
+    };
+    return roleMap[role] || role;
+  };
+
   // Create a modified user object for "view as" functionality
   const effectiveUser: User = {
     ...user,
-    role: user.role === 'admin' ? viewAsRole : user.role
+    role: user.role === 'bbt_execution_team' ? viewAsRole : user.role
   };
+
+  // Determine if user should see admin dashboard
+  const isAdminUser = user.role === 'bbt_execution_team';
+  const shouldShowAdminDashboard = effectiveUser.role === 'bbt_execution_team';
 
   return (
     <div className="min-h-screen bg-bb-light-gray">
@@ -48,8 +69,13 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
               <UserIcon className="h-4 w-4" />
               <span className="font-medium text-bb-dark-gray">{user.name}</span>
               <span className="px-2 py-1 bg-bb-red text-white rounded-full text-xs font-medium">
-                {user.role.replace('_', ' ').toUpperCase()}
+                {getRoleDisplayName(user.role)}
               </span>
+              {user.organization && (
+                <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-full text-xs">
+                  {user.organization}
+                </span>
+              )}
             </div>
             <Button 
               variant="outline" 
@@ -67,8 +93,8 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
       {/* Main Content */}
       <main className="p-6">
         <div className="space-y-6">
-          {/* Admin View As Toggle - only show for actual admins */}
-          {user.role === 'admin' && (
+          {/* Admin View As Toggle - only show for BBT Execution Team */}
+          {isAdminUser && (
             <ViewAsToggle 
               currentRole={viewAsRole}
               onRoleChange={setViewAsRole}
@@ -76,7 +102,7 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
           )}
 
           {/* Dashboard Content - use effectiveUser which reflects the "view as" role */}
-          {effectiveUser.role === 'admin' ? (
+          {shouldShowAdminDashboard ? (
             <AdminDashboard user={effectiveUser} />
           ) : (
             <UserDashboard user={effectiveUser} />

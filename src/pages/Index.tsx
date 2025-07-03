@@ -4,13 +4,24 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
 
-export type UserRole = 'view_only' | 'upload_only' | 'admin';
+export type UserRole = 
+  | 'bbt_execution_team'
+  | 'bbt_operations' 
+  | 'bbt_finance'
+  | 'bbt_legal'
+  | 'bbt_exec'
+  | 'seller'
+  | 'seller_legal'
+  | 'seller_financial'
+  | 'rsm'
+  | 'hensen_efron';
 
 export interface User {
   id: string;
   email: string;
   name: string;
   role: UserRole;
+  organization?: string;
   dealId?: string;
 }
 
@@ -43,7 +54,8 @@ const Index = () => {
     id: profile.id,
     email: profile.email,
     name: profile.name,
-    role: profile.role,
+    role: profile.role as UserRole,
+    organization: profile.organization,
     dealId: profile.deal_id || undefined,
   };
 

@@ -10,25 +10,38 @@ interface AdminNavigationProps {
 }
 
 export const AdminNavigation = ({ user }: AdminNavigationProps) => {
+  // Only BBT Execution Team can manage users and templates
+  const canManageUsers = user.role === 'bbt_execution_team';
+  const canManageTemplates = user.role === 'bbt_execution_team';
+  
+  // All BBT roles can view deals
+  const canViewDeals = user.role.startsWith('bbt_') || user.role === 'rsm' || user.role === 'hensen_efron';
+
   return (
     <Tabs defaultValue="deals" className="space-y-6">
-      <TabsList className="grid w-full grid-cols-3">
-        <TabsTrigger value="deals">Deals</TabsTrigger>
-        <TabsTrigger value="templates">Request Templates</TabsTrigger>
-        <TabsTrigger value="users">Users</TabsTrigger>
+      <TabsList className={`grid w-full ${canManageUsers ? 'grid-cols-3' : canManageTemplates ? 'grid-cols-2' : 'grid-cols-1'}`}>
+        {canViewDeals && <TabsTrigger value="deals">Deals</TabsTrigger>}
+        {canManageTemplates && <TabsTrigger value="templates">Request Templates</TabsTrigger>}
+        {canManageUsers && <TabsTrigger value="users">Users</TabsTrigger>}
       </TabsList>
 
-      <TabsContent value="deals">
-        <DealManagement user={user} />
-      </TabsContent>
+      {canViewDeals && (
+        <TabsContent value="deals">
+          <DealManagement user={user} />
+        </TabsContent>
+      )}
 
-      <TabsContent value="templates">
-        <TemplateManager />
-      </TabsContent>
+      {canManageTemplates && (
+        <TabsContent value="templates">
+          <TemplateManager />
+        </TabsContent>
+      )}
 
-      <TabsContent value="users">
-        <UserManagement />
-      </TabsContent>
+      {canManageUsers && (
+        <TabsContent value="users">
+          <UserManagement />
+        </TabsContent>
+      )}
     </Tabs>
   );
 };

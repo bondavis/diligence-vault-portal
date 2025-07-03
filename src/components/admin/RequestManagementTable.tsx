@@ -52,10 +52,10 @@ export const RequestManagementTable = () => {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
   const [filters, setFilters] = useState({
-    category: '',
-    priority: '',
-    status: '',
-    assigned: ''
+    category: 'all',
+    priority: 'all',
+    status: 'all',
+    assigned: 'all'
   });
   
   const { toast } = useToast();
@@ -112,10 +112,10 @@ export const RequestManagementTable = () => {
       request.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (request.description && request.description.toLowerCase().includes(searchQuery.toLowerCase()));
     
-    const matchesCategory = filters.category === '' || request.category === filters.category;
-    const matchesPriority = filters.priority === '' || request.priority === filters.priority;
-    const matchesStatus = filters.status === '' || request.status === filters.status;
-    const matchesAssigned = filters.assigned === '' || 
+    const matchesCategory = filters.category === 'all' || filters.category === '' || request.category === filters.category;
+    const matchesPriority = filters.priority === 'all' || filters.priority === '' || request.priority === filters.priority;
+    const matchesStatus = filters.status === 'all' || filters.status === '' || request.status === filters.status;
+    const matchesAssigned = filters.assigned === 'all' || filters.assigned === '' || 
       (filters.assigned === 'unassigned' && !request.assigned_to) ||
       (filters.assigned === 'assigned' && request.assigned_to);
 

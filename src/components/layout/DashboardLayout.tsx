@@ -1,8 +1,9 @@
 
 import { useState } from 'react';
-import { User } from '@/pages/Index';
+import { User, UserRole } from '@/pages/Index';
 import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
 import { UserDashboard } from '@/components/dashboard/UserDashboard';
+import { ViewAsToggle } from '@/components/admin/ViewAsToggle';
 import { Button } from '@/components/ui/button';
 import { LogOut, User as UserIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
@@ -13,9 +14,16 @@ interface DashboardLayoutProps {
 
 export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
   const { signOut } = useAuth();
+  const [viewAsRole, setViewAsRole] = useState<UserRole>(user.role);
 
   const handleLogout = async () => {
     await signOut();
+  };
+
+  // Create a modified user object for "view as" functionality
+  const effectiveUser: User = {
+    ...user,
+    role: user.role === 'admin' ? viewAsRole : user.role
   };
 
   return (
@@ -58,11 +66,22 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
 
       {/* Main Content */}
       <main className="p-6">
-        {user.role === 'admin' ? (
-          <AdminDashboard user={user} />
-        ) : (
-          <UserDashboard user={user} />
-        )}
+        <div className="space-y-6">
+          {/* Admin View As Toggle - only show for actual admins */}
+          {user.role === 'admin' && (
+            <ViewAsToggle 
+              currentRole={viewAsRole}
+              onRoleChange={setViewAsRole}
+            />
+          )}
+
+          {/* Dashboard Content - use effectiveUser which reflects the "view as" role */}
+          {effectiveUser.role === 'admin' ? (
+            <AdminDashboard user={effectiveUser} />
+          ) : (
+            <UserDashboard user={effectiveUser} />
+          )}
+        </div>
       </main>
     </div>
   );

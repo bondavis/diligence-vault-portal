@@ -7,7 +7,7 @@ interface Profile {
   id: string;
   email: string;
   name: string;
-  role: 'bbt_execution_team' | 'bbt_operations' | 'bbt_finance' | 'bbt_legal' | 'bbt_exec' | 'seller' | 'seller_legal' | 'seller_financial' | 'rsm' | 'hensen_efron';
+  role: 'bbt_execution_team' | 'bbt_operations' | 'bbt_finance' | 'bbt_legal' | 'bbt_exec' | 'seller' | 'seller_legal' | 'seller_financial' | 'rsm' | 'hensen_efron' | 'admin';
   organization?: string;
   deal_id?: string;
   created_at: string;
@@ -40,12 +40,12 @@ export const useAuth = () => {
               
               if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching profile:', error);
-                // Create default profile if none exists - use BBT execution team for testing
+                // Create default profile if none exists - use admin for testing
                 const defaultProfile: Profile = {
                   id: session.user.id,
                   email: session.user.email || '',
                   name: session.user.email?.split('@')[0] || 'User',
-                  role: 'bbt_execution_team', // Default to admin role for testing
+                  role: 'admin', // Default to admin role for testing
                   created_at: new Date().toISOString(),
                 };
                 setProfile(defaultProfile);
@@ -55,7 +55,7 @@ export const useAuth = () => {
                   id: profileData.id,
                   email: profileData.email,
                   name: profileData.name,
-                  role: (profileData.role as Profile['role']) || 'bbt_execution_team',
+                  role: (profileData.role as Profile['role']) || 'admin',
                   organization: (profileData as any).organization || undefined,
                   deal_id: (profileData as any).deal_id || undefined,
                   created_at: profileData.created_at,
@@ -71,7 +71,7 @@ export const useAuth = () => {
                 id: session.user.id,
                 email: session.user.email || '',
                 name: session.user.email?.split('@')[0] || 'User',
-                role: 'bbt_execution_team',
+                role: 'admin',
                 created_at: new Date().toISOString(),
               };
               setProfile(fallbackProfile);

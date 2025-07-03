@@ -10,12 +10,12 @@ interface AdminNavigationProps {
 }
 
 export const AdminNavigation = ({ user }: AdminNavigationProps) => {
-  // Only BBT Execution Team can manage users and templates
-  const canManageUsers = user.role === 'bbt_execution_team';
-  const canManageTemplates = user.role === 'bbt_execution_team';
+  // Admin and BBT Execution Team can manage users and templates
+  const canManageUsers = user.role === 'bbt_execution_team' || user.role === 'admin';
+  const canManageTemplates = user.role === 'bbt_execution_team' || user.role === 'admin';
   
-  // All BBT roles can view deals
-  const canViewDeals = user.role.startsWith('bbt_') || user.role === 'rsm' || user.role === 'hensen_efron';
+  // All BBT roles and admin can view deals
+  const canViewDeals = user.role.startsWith('bbt_') || user.role === 'rsm' || user.role === 'hensen_efron' || user.role === 'admin';
 
   return (
     <Tabs defaultValue="deals" className="space-y-6">

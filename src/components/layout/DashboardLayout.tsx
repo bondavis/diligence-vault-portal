@@ -32,7 +32,8 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
       seller_legal: 'Seller Legal',
       seller_financial: 'Seller Financial',
       rsm: 'RSM',
-      hensen_efron: 'Hensen & Efron'
+      hensen_efron: 'Hensen & Efron',
+      admin: 'Admin'
     };
     return roleMap[role] || role;
   };
@@ -40,13 +41,14 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
   // Create a modified user object for "view as" functionality
   const effectiveUser: User = {
     ...user,
-    role: user.role === 'bbt_execution_team' ? viewAsRole : user.role
+    role: (user.role === 'bbt_execution_team' || user.role === 'admin') ? viewAsRole : user.role
   };
 
-  // Determine if user should see admin dashboard - BBT roles get admin access
-  const isAdminUser = user.role === 'bbt_execution_team';
-  const isBBTUser = user.role.startsWith('bbt_') || user.role === 'rsm' || user.role === 'hensen_efron';
+  // Determine if user should see admin dashboard - admin and BBT roles get admin access
+  const isAdminUser = user.role === 'bbt_execution_team' || user.role === 'admin';
+  const isBBTUser = user.role.startsWith('bbt_') || user.role === 'rsm' || user.role === 'hensen_efron' || user.role === 'admin';
   const shouldShowAdminDashboard = effectiveUser.role === 'bbt_execution_team' || 
+    effectiveUser.role === 'admin' ||
     (effectiveUser.role.startsWith('bbt_') && viewAsRole === user.role);
 
   console.log('Dashboard Layout - User role:', user.role, 'Should show admin:', shouldShowAdminDashboard, 'Is BBT user:', isBBTUser);
@@ -97,7 +99,7 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
       {/* Main Content */}
       <main className="p-6">
         <div className="space-y-6">
-          {/* Admin View As Toggle - only show for BBT Execution Team */}
+          {/* Admin View As Toggle - show for admin and BBT Execution Team */}
           {isAdminUser && (
             <ViewAsToggle 
               currentRole={viewAsRole}
@@ -105,8 +107,8 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
             />
           )}
 
-          {/* Dashboard Content - prioritize admin dashboard for BBT users */}
-          {(shouldShowAdminDashboard || isBBTUser) ? (
+          {/* Dashboard Content - prioritize admin dashboard for admin and BBT users */}
+          {shouldShowAdminDashboard ? (
             <AdminDashboard user={effectiveUser} />
           ) : (
             <UserDashboard user={effectiveUser} />

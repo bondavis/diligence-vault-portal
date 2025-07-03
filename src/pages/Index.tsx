@@ -14,7 +14,8 @@ export type UserRole =
   | 'seller_legal'
   | 'seller_financial'
   | 'rsm'
-  | 'hensen_efron';
+  | 'hensen_efron'
+  | 'admin';
 
 export interface User {
   id: string;

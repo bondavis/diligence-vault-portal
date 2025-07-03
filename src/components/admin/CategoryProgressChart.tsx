@@ -95,7 +95,7 @@ export const CategoryProgressChart = ({
               <div className="text-sm">
                 <div className="font-medium">{entry.value}</div>
                 <div className="text-gray-500">
-                  {data?.completionRate}% complete ({data?.total} total)
+                  {data?.completionRate}% complete ({data?.value} total)
                 </div>
               </div>
             </div>

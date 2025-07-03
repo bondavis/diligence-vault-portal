@@ -1,12 +1,12 @@
 
 import { useState } from 'react';
 import { User, UserRole } from '@/pages/Index';
-import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
-import { UserDashboard } from '@/components/dashboard/UserDashboard';
+import { RoleBasedDashboard } from '@/components/dashboard/RoleBasedDashboard';
 import { ViewAsToggle } from '@/components/admin/ViewAsToggle';
 import { Button } from '@/components/ui/button';
 import { LogOut, User as UserIcon } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
+import { getRoleDisplayName } from '@/components/users/utils/roleUtils';
 
 interface DashboardLayoutProps {
   user: User;
@@ -20,38 +20,16 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
     await signOut();
   };
 
-  // Helper function to get role display name
-  const getRoleDisplayName = (role: UserRole): string => {
-    const roleMap: Record<UserRole, string> = {
-      bbt_execution_team: 'BBT Execution Team',
-      bbt_operations: 'BBT Operations',
-      bbt_finance: 'BBT Finance',
-      bbt_legal: 'BBT Legal',
-      bbt_exec: 'BBT Executive',
-      seller: 'Seller',
-      seller_legal: 'Seller Legal',
-      seller_financial: 'Seller Financial',
-      rsm: 'RSM',
-      hensen_efron: 'Hensen & Efron',
-      admin: 'Admin'
-    };
-    return roleMap[role] || role;
-  };
-
   // Create a modified user object for "view as" functionality
   const effectiveUser: User = {
     ...user,
     role: (user.role === 'bbt_execution_team' || user.role === 'admin') ? viewAsRole : user.role
   };
 
-  // Determine if user should see admin dashboard - admin and BBT roles get admin access
-  const isAdminUser = user.role === 'bbt_execution_team' || user.role === 'admin';
-  const isBBTUser = user.role.startsWith('bbt_') || user.role === 'rsm' || user.role === 'hensen_efron' || user.role === 'admin';
-  const shouldShowAdminDashboard = effectiveUser.role === 'bbt_execution_team' || 
-    effectiveUser.role === 'admin' ||
-    (effectiveUser.role.startsWith('bbt_') && viewAsRole === user.role);
+  // Only admin and BBT Execution Team can use "view as" functionality
+  const canViewAs = user.role === 'bbt_execution_team' || user.role === 'admin';
 
-  console.log('Dashboard Layout - User role:', user.role, 'Should show admin:', shouldShowAdminDashboard, 'Is BBT user:', isBBTUser);
+  console.log('Dashboard Layout - User role:', user.role, 'Effective role:', effectiveUser.role, 'Can view as:', canViewAs);
 
   return (
     <div className="min-h-screen bg-bb-light-gray">
@@ -100,19 +78,15 @@ export const DashboardLayout = ({ user }: DashboardLayoutProps) => {
       <main className="p-6">
         <div className="space-y-6">
           {/* Admin View As Toggle - show for admin and BBT Execution Team */}
-          {isAdminUser && (
+          {canViewAs && (
             <ViewAsToggle 
               currentRole={viewAsRole}
               onRoleChange={setViewAsRole}
             />
           )}
 
-          {/* Dashboard Content - prioritize admin dashboard for admin and BBT users */}
-          {shouldShowAdminDashboard ? (
-            <AdminDashboard user={effectiveUser} />
-          ) : (
-            <UserDashboard user={effectiveUser} />
-          )}
+          {/* Role-based Dashboard Content */}
+          <RoleBasedDashboard user={effectiveUser} />
         </div>
       </main>
     </div>

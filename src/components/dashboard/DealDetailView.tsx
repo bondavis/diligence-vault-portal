@@ -3,9 +3,12 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Calendar, Building, FileText, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
+import { ArrowLeft, Calendar, Building, FileText, AlertCircle, CheckCircle, Clock, Plus, Upload } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { RequestDetailModal } from './RequestDetailModal';
+import { templateService } from '@/services/templateService';
 
 interface Deal {
   id: string;
@@ -30,6 +33,16 @@ interface DiligenceRequest {
   document_count?: number;
   has_response?: boolean;
   computed_status?: string;
+  allow_file_upload: boolean;
+  allow_text_response: boolean;
+  period_text: string | null;
+}
+
+interface CategoryProgress {
+  category: string;
+  total: number;
+  completed: number;
+  percentage: number;
 }
 
 interface DealDetailViewProps {
@@ -40,7 +53,10 @@ interface DealDetailViewProps {
 
 export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailViewProps) => {
   const [requests, setRequests] = useState<DiligenceRequest[]>([]);
+  const [categoryProgress, setCategoryProgress] = useState<CategoryProgress[]>([]);
+  const [selectedRequest, setSelectedRequest] = useState<DiligenceRequest | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadingTemplate, setLoadingTemplate] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -96,6 +112,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
       );
 
       setRequests(requestsWithStatus);
+      calculateCategoryProgress(requestsWithStatus);
     } catch (error) {
       console.error('Error loading deal requests:', error);
       toast({
@@ -105,6 +122,59 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const calculateCategoryProgress = (requests: DiligenceRequest[]) => {
+    const categoryMap = new Map<string, { total: number; completed: number }>();
+    
+    requests.forEach(request => {
+      const category = request.category;
+      if (!categoryMap.has(category)) {
+        categoryMap.set(category, { total: 0, completed: 0 });
+      }
+      
+      const categoryStats = categoryMap.get(category)!;
+      categoryStats.total++;
+      
+      if (request.computed_status === 'Accepted') {
+        categoryStats.completed++;
+      }
+    });
+
+    const progress = Array.from(categoryMap.entries()).map(([category, stats]) => ({
+      category,
+      total: stats.total,
+      completed: stats.completed,
+      percentage: stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
+    }));
+
+    setCategoryProgress(progress);
+  };
+
+  const handleLoadTemplate = async () => {
+    try {
+      setLoadingTemplate(true);
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) throw new Error('Not authenticated');
+
+      await templateService.applyTemplateToDeal(deal.id, user.data.user.id);
+      
+      toast({
+        title: "Success",
+        description: "Template requests loaded successfully",
+      });
+
+      loadDealRequests();
+    } catch (error) {
+      console.error('Error loading template:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load template requests",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingTemplate(false);
     }
   };
 
@@ -149,7 +219,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
 
   const completedRequests = requests.filter(r => r.computed_status === 'Accepted').length;
   const totalRequests = requests.length;
-  const completionPercentage = totalRequests > 0 ? Math.round((completedRequests / totalRequests) * 100) : 0;
+  const overallCompletionPercentage = totalRequests > 0 ? Math.round((completedRequests / totalRequests) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -170,7 +240,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
               </div>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold text-bb-red">{completionPercentage}%</div>
+              <div className="text-3xl font-bold text-bb-red">{overallCompletionPercentage}%</div>
               <div className="text-sm text-gray-500">Complete</div>
             </div>
           </div>
@@ -204,51 +274,43 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
         </CardContent>
       </Card>
 
-      {/* Progress Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      {/* Category Progress */}
+      {categoryProgress.length > 0 && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Requests</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle>Progress by Category</CardTitle>
+            <CardDescription>
+              Completion status across different request categories
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalRequests}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Completed</CardTitle>
-            <CheckCircle className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{completedRequests}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">In Progress</CardTitle>
-            <AlertCircle className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {requests.filter(r => r.computed_status === 'Review Pending').length}
+            <div className="space-y-4">
+              {categoryProgress.map((category) => (
+                <div key={category.category} className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">{category.category}</span>
+                    <span className="text-sm text-gray-500">
+                      {category.completed} / {category.total} ({category.percentage}%)
+                    </span>
+                  </div>
+                  <Progress value={category.percentage} className="h-2" />
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
+      )}
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Incomplete</CardTitle>
-            <FileText className="h-4 w-4 text-gray-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-gray-600">
-              {requests.filter(r => r.computed_status === 'Incomplete').length}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Admin Actions */}
+      <div className="flex items-center space-x-4">
+        <Button onClick={handleLoadTemplate} disabled={loadingTemplate}>
+          <Upload className="h-4 w-4 mr-2" />
+          {loadingTemplate ? 'Loading...' : 'Load Template Requests'}
+        </Button>
+        <Button variant="outline">
+          <Plus className="h-4 w-4 mr-2" />
+          Add Custom Request
+        </Button>
       </div>
 
       {/* Requests List */}
@@ -269,7 +331,11 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
           ) : (
             <div className="space-y-4">
               {requests.map((request) => (
-                <div key={request.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                <div 
+                  key={request.id} 
+                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => setSelectedRequest(request)}
+                >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <h4 className="font-medium text-lg mb-1">{request.title}</h4>
@@ -300,6 +366,15 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
           )}
         </CardContent>
       </Card>
+
+      {/* Request Detail Modal */}
+      <RequestDetailModal
+        request={selectedRequest}
+        isOpen={!!selectedRequest}
+        onClose={() => setSelectedRequest(null)}
+        onUpdate={loadDealRequests}
+        isAdmin={true}
+      />
     </div>
   );
 };

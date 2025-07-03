@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, Building, FileText, TrendingUp, AlertCircle, Settings } from 'lucide-react';
+import { Building, Calendar, ChevronRight } from 'lucide-react';
 import { User } from '@/pages/Index';
 import { UserManagement } from '@/components/users/UserManagement';
 import { DealsOverview } from '@/components/deals/DealsOverview';
@@ -11,11 +11,23 @@ import { DiligenceRequestUpload } from '@/components/upload/DiligenceRequestUplo
 import { RequestManagementTable } from '@/components/admin/RequestManagementTable';
 import { CategoryProgressCard } from '@/components/admin/CategoryProgressCard';
 import { TemplateManager } from '@/components/templates/TemplateManager';
+import { DealDetailView } from './DealDetailView';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 interface AdminDashboardProps {
   user: User;
+}
+
+interface Deal {
+  id: string;
+  name: string;
+  company_name: string;
+  project_name: string;
+  target_close_date: string | null;
+  created_at: string;
+  request_count?: number;
+  completed_count?: number;
 }
 
 interface CategoryStats {
@@ -26,44 +38,71 @@ interface CategoryStats {
   incomplete: number;
 }
 
-interface DashboardStats {
-  totalRequests: number;
-  unassigned: number;
-  accepted: number;
-  overdue: number;
-  categories: CategoryStats[];
-}
-
 export const AdminDashboard = ({ user }: AdminDashboardProps) => {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalRequests: 0,
-    unassigned: 0,
-    accepted: 0,
-    overdue: 0,
-    categories: []
-  });
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [categories, setCategories] = useState<CategoryStats[]>([]);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    loadDashboardStats();
+    loadDeals();
+    loadCategoryStats();
   }, []);
 
-  const computeRequestStatus = (request: any) => {
-    const hasDocuments = (request.document_count || 0) > 0;
-    const hasResponse = request.has_response;
-    
-    if (request.status === 'approved') return 'Accepted';
-    if (hasDocuments || hasResponse) return 'Review Pending';
-    return 'Incomplete';
-  };
-
-  const loadDashboardStats = async () => {
+  const loadDeals = async () => {
     try {
       setLoading(true);
       
-      // Load all requests with document counts and response status
+      // Load deals with request counts
+      const { data: dealsData, error: dealsError } = await supabase
+        .from('deals')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (dealsError) throw dealsError;
+
+      // Get request counts for each deal
+      const dealsWithCounts = await Promise.all(
+        (dealsData || []).map(async (deal) => {
+          // Get total request count
+          const { count: totalCount } = await supabase
+            .from('diligence_requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('deal_id', deal.id);
+
+          // Get completed request count
+          const { count: completedCount } = await supabase
+            .from('diligence_requests')
+            .select('*', { count: 'exact', head: true })
+            .eq('deal_id', deal.id)
+            .eq('status', 'approved');
+
+          return {
+            ...deal,
+            request_count: totalCount || 0,
+            completed_count: completedCount || 0
+          };
+        })
+      );
+
+      setDeals(dealsWithCounts);
+    } catch (error) {
+      console.error('Error loading deals:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load deals",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadCategoryStats = async () => {
+    try {
+      // Load all requests with status computation
       const { data: requestsData, error: requestsError } = await supabase
         .from('diligence_requests')
         .select('*')
@@ -74,39 +113,30 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
       // Get document counts and response status for each request
       const requestsWithStatus = await Promise.all(
         (requestsData || []).map(async (request) => {
-          // Get document count
           const { count: docCount } = await supabase
             .from('request_documents')
             .select('*', { count: 'exact', head: true })
             .eq('request_id', request.id);
 
-          // Check if has response
           const { data: responseData } = await supabase
             .from('diligence_responses')
             .select('id')
             .eq('request_id', request.id)
             .maybeSingle();
 
-          const enrichedRequest = {
-            ...request,
-            document_count: docCount || 0,
-            has_response: !!responseData
-          };
+          const hasDocuments = (docCount || 0) > 0;
+          const hasResponse = !!responseData;
+          
+          let computed_status = 'Incomplete';
+          if (request.status === 'approved') computed_status = 'Accepted';
+          else if (hasDocuments || hasResponse) computed_status = 'Review Pending';
 
           return {
-            ...enrichedRequest,
-            computed_status: computeRequestStatus(enrichedRequest)
+            ...request,
+            computed_status
           };
         })
       );
-
-      // Calculate overall stats
-      const totalRequests = requestsWithStatus.length;
-      const unassigned = requestsWithStatus.filter(r => !r.assigned_to).length;
-      const accepted = requestsWithStatus.filter(r => r.computed_status === 'Accepted').length;
-      const overdue = requestsWithStatus.filter(r => 
-        r.due_date && new Date(r.due_date) < new Date()
-      ).length;
 
       // Calculate category stats
       const categoryMap = new Map<string, CategoryStats>();
@@ -139,24 +169,10 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
         }
       });
 
-      const categories = Array.from(categoryMap.values()).sort((a, b) => b.total - a.total);
-
-      setStats({
-        totalRequests,
-        unassigned,
-        accepted,
-        overdue,
-        categories
-      });
+      const categoriesArray = Array.from(categoryMap.values()).sort((a, b) => b.total - a.total);
+      setCategories(categoriesArray);
     } catch (error) {
-      console.error('Error loading dashboard stats:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load dashboard statistics",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
+      console.error('Error loading category stats:', error);
     }
   };
 
@@ -164,9 +180,31 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
     setSelectedCategory(selectedCategory === category ? null : category);
   };
 
-  const overallProgress = stats.totalRequests > 0 
-    ? Math.round((stats.accepted / stats.totalRequests) * 100) 
-    : 0;
+  const handleDealClick = (deal: Deal) => {
+    setSelectedDeal(deal);
+  };
+
+  const handleBackToDeals = () => {
+    setSelectedDeal(null);
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  if (selectedDeal) {
+    return (
+      <DealDetailView 
+        deal={selectedDeal} 
+        onBack={handleBackToDeals}
+        onRequestUpdate={loadCategoryStats}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -180,63 +218,85 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
                 Manage users, deals, templates, and diligence requests
               </CardDescription>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold">{overallProgress}%</div>
-              <div className="text-sm text-red-100">Complete</div>
-            </div>
           </div>
         </CardHeader>
       </Card>
 
-      {/* Overall Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="border-l-4 border-l-bb-red">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-bb-dark-gray">Total Requests</CardTitle>
-            <FileText className="h-4 w-4 text-bb-red" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-bb-dark-gray">{stats.totalRequests}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-amber-600">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-bb-dark-gray">Unassigned</CardTitle>
-            <Users className="h-4 w-4 text-amber-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{stats.unassigned}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-green-600">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-bb-dark-gray">Accepted</CardTitle>
-            <Building className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-l-4 border-l-red-600">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-bb-dark-gray">Overdue</CardTitle>
-            <AlertCircle className="h-4 w-4 text-red-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-red-600">{stats.overdue}</div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Active Deals List */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center space-x-2">
+            <Building className="h-5 w-5" />
+            <span>Active Deals</span>
+          </CardTitle>
+          <CardDescription>
+            Click on any deal to view diligence request progress
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <div className="text-center py-8">Loading deals...</div>
+          ) : deals.length === 0 ? (
+            <div className="text-center py-8 text-gray-500">
+              No deals found. Create your first deal in the Deals tab.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {deals.map((deal) => (
+                <div 
+                  key={deal.id} 
+                  className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer group"
+                  onClick={() => handleDealClick(deal)}
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-lg group-hover:text-bb-red transition-colors">
+                          {deal.name}
+                        </h4>
+                        <ChevronRight className="h-5 w-5 text-gray-400 group-hover:text-bb-red transition-colors" />
+                      </div>
+                      <p className="text-sm text-gray-600 mb-1">
+                        <span className="font-medium">Company:</span> {deal.company_name}
+                      </p>
+                      <p className="text-sm text-gray-600 mb-2">
+                        <span className="font-medium">Project:</span> {deal.project_name}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-4 text-xs text-gray-500">
+                          <div className="flex items-center space-x-1">
+                            <Calendar className="h-3 w-3" />
+                            <span>Created: {formatDate(deal.created_at)}</span>
+                          </div>
+                          {deal.target_close_date && (
+                            <div className="flex items-center space-x-1">
+                              <Calendar className="h-3 w-3" />
+                              <span>Target: {formatDate(deal.target_close_date)}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <Badge variant="outline">
+                            {deal.completed_count || 0} / {deal.request_count || 0} Completed
+                          </Badge>
+                          <Badge variant="outline">Active</Badge>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Category Progress Cards */}
-      {stats.categories.length > 0 && (
+      {categories.length > 0 && (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold">Category Progress</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-            {stats.categories.map((categoryStats) => (
+            {categories.map((categoryStats) => (
               <CategoryProgressCard
                 key={categoryStats.category}
                 stats={categoryStats}
@@ -291,8 +351,9 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
         <TabsContent value="upload">
           <DiligenceRequestUpload onUploadComplete={() => {
-            console.log('Upload completed - refreshing dashboard stats');
-            loadDashboardStats();
+            console.log('Upload completed - refreshing data');
+            loadDeals();
+            loadCategoryStats();
           }} />
         </TabsContent>
       </Tabs>

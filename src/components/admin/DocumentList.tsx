@@ -303,7 +303,7 @@ export const DocumentList = ({ documents, onDocumentUpdate }: DocumentListProps)
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDelete}
-              disabled={deleting}
+              disabled={!!deleting}
               className="bg-red-600 hover:bg-red-700"
             >
               {deleting ? 'Deleting...' : 'Delete'}

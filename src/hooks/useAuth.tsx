@@ -40,7 +40,18 @@ export const useAuth = () => {
               if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching profile:', error);
               } else if (profileData) {
-                setProfile(profileData);
+                // Type cast the profile data to ensure it matches our interface
+                const typedProfile: Profile = {
+                  id: profileData.id,
+                  email: profileData.email,
+                  name: profileData.name,
+                  role: profileData.role as Profile['role'],
+                  organization: profileData.organization,
+                  deal_id: profileData.deal_id,
+                  created_at: profileData.created_at,
+                  last_active: profileData.last_active
+                };
+                setProfile(typedProfile);
               }
             } catch (error) {
               console.error('Error in profile fetch:', error);

@@ -17,12 +17,12 @@ export const Login = ({ onLogin }: LoginProps) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Demo users for testing
+  // Updated demo users with new role structure
   const demoUsers: User[] = [
-    { id: '1', email: 'admin@madiligence.com', name: 'Sarah Chen', role: 'admin' },
-    { id: '2', email: 'seller@techacq.com', name: 'Michael Torres', role: 'upload_only', dealId: 'deal-1' },
-    { id: '3', email: 'legal@lawfirm.com', name: 'Jennifer Walsh', role: 'upload_only', dealId: 'deal-1' },
-    { id: '4', email: 'viewer@investor.com', name: 'David Kim', role: 'view_only', dealId: 'deal-1' }
+    { id: '1', email: 'admin@bigbrandtire.com', name: 'Sarah Chen', role: 'bbt_execution_team', organization: 'BBT' },
+    { id: '2', email: 'seller@techacq.com', name: 'Michael Torres', role: 'seller', organization: 'Seller', dealId: 'deal-1' },
+    { id: '3', email: 'legal@sellercorp.com', name: 'Jennifer Walsh', role: 'seller_legal', organization: 'Seller', dealId: 'deal-1' },
+    { id: '4', email: 'viewer@rsm.com', name: 'David Kim', role: 'rsm', organization: 'RSM' }
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -94,10 +94,10 @@ export const Login = ({ onLogin }: LoginProps) => {
             <div className="mt-6 p-4 bg-slate-50 rounded-lg">
               <p className="text-sm font-medium text-slate-700 mb-2">Demo Accounts:</p>
               <div className="space-y-1 text-xs text-slate-600">
-                <p><strong>Admin:</strong> admin@madiligence.com</p>
+                <p><strong>BBT Admin:</strong> admin@bigbrandtire.com</p>
                 <p><strong>Seller:</strong> seller@techacq.com</p>
-                <p><strong>Legal:</strong> legal@lawfirm.com</p>
-                <p><strong>Viewer:</strong> viewer@investor.com</p>
+                <p><strong>Seller Legal:</strong> legal@sellercorp.com</p>
+                <p><strong>RSM:</strong> viewer@rsm.com</p>
                 <p className="mt-2"><strong>Password:</strong> demo123</p>
               </div>
             </div>

@@ -110,7 +110,7 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
             description: request.description || '',
             category: request.category || 'Other',
             priority: request.priority || 'medium',
-            due_date: request.due_date || null,
+            due_date: request.period || null,
             allow_file_upload: request.allow_file_upload === 'false' ? false : true,
             allow_text_response: request.allow_text_response === 'false' ? false : true,
             created_by: (await supabase.auth.getUser()).data.user?.id
@@ -150,10 +150,10 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
 
   const downloadTemplate = () => {
     const template = [
-      'title,description,category,priority,due_date,allow_file_upload,allow_text_response',
-      'Audited Financial Statements,"Please provide audited financial statements for the last 3 years",Financial,high,2024-12-31,true,false',
+      'title,description,category,priority,period,allow_file_upload,allow_text_response',
+      'Audited Financial Statements,"Please provide audited financial statements for the last 3 years",Financial,high,Q4 2024,true,false',
       'Revenue Recognition Policy,"Describe the company\'s revenue recognition policy",Financial,medium,,true,true',
-      'Material Contracts,"Upload all material contracts",Legal,high,2024-11-30,true,false'
+      'Material Contracts,"Upload all material contracts",Legal,high,Q4 2024,true,false'
     ].join('\n');
 
     const blob = new Blob([template], { type: 'text/csv' });
@@ -268,7 +268,7 @@ export const DiligenceRequestUpload = ({ onUploadComplete }: DiligenceRequestUpl
             <li>• <strong>description</strong>: Detailed description</li>
             <li>• <strong>category</strong>: Financial, Legal, Operations, HR, IT, Environmental, Commercial, Other</li>
             <li>• <strong>priority</strong>: high, medium, low</li>
-            <li>• <strong>due_date</strong>: YYYY-MM-DD format</li>
+            <li>• <strong>period</strong>: Time period or deadline (e.g., "Q4 2024", "January 2025")</li>
             <li>• <strong>allow_file_upload</strong>: true/false</li>
             <li>• <strong>allow_text_response</strong>: true/false</li>
           </ul>

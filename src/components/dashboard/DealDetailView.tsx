@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -220,6 +219,13 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
   const totalRequests = requests.length;
   const overallCompletionPercentage = totalRequests > 0 ? Math.round((completedRequests / totalRequests) * 100) : 0;
 
+  const handleRequestsUpdated = () => {
+    loadDealRequests();
+    if (onRequestUpdate) {
+      onRequestUpdate();
+    }
+  };
+
   return (
     <div className="space-y-6">
       <DealHeader 
@@ -244,7 +250,9 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
         onToggleFilters={() => setShowFilters(!showFilters)}
         onFilterChange={setActiveFilters}
         onRequestClick={setSelectedRequest}
+        onRequestsUpdated={handleRequestsUpdated}
         getRequestCounts={getRequestCounts}
+        isAdmin={true}
       />
 
       <RequestDetailModal

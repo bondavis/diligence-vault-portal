@@ -56,10 +56,10 @@ export const DealsOverview = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      case 'closed': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'active': return 'bg-green-100 text-green-800 border-green-200';
+      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+      case 'closed': return 'bg-gray-100 text-gray-800 border-gray-200';
+      default: return 'bg-gray-100 text-gray-800 border-gray-200';
     }
   };
 
@@ -67,10 +67,10 @@ export const DealsOverview = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h3 className="text-lg font-semibold">Active Deals</h3>
-          <p className="text-sm text-muted-foreground">Manage and monitor all deal progress</p>
+          <h3 className="text-lg font-semibold text-bb-dark-gray">Active Deals</h3>
+          <p className="text-sm text-gray-600">Manage and monitor all deal progress</p>
         </div>
-        <Button>
+        <Button className="bg-bb-red hover:bg-red-700 text-white">
           <Plus className="h-4 w-4 mr-2" />
           New Deal
         </Button>
@@ -78,12 +78,12 @@ export const DealsOverview = () => {
 
       <div className="grid gap-6">
         {deals.map(deal => (
-          <Card key={deal.id} className="hover:shadow-md transition-shadow">
+          <Card key={deal.id} className="hover:shadow-md transition-shadow border-l-4 border-l-bb-red">
             <CardHeader>
               <div className="flex items-start justify-between">
                 <div className="space-y-2">
                   <div className="flex items-center space-x-3">
-                    <CardTitle className="text-xl">{deal.name}</CardTitle>
+                    <CardTitle className="text-xl text-bb-dark-gray">{deal.name}</CardTitle>
                     <Badge variant="outline" className={getStatusColor(deal.status)}>
                       {deal.status.toUpperCase()}
                     </Badge>
@@ -95,8 +95,8 @@ export const DealsOverview = () => {
                   </CardDescription>
                 </div>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-blue-600">{deal.progress}%</div>
-                  <div className="text-sm text-muted-foreground">Complete</div>
+                  <div className="text-2xl font-bold text-bb-red">{deal.progress}%</div>
+                  <div className="text-sm text-gray-600">Complete</div>
                 </div>
               </div>
             </CardHeader>
@@ -105,36 +105,42 @@ export const DealsOverview = () => {
               
               <div className="grid grid-cols-3 gap-4 text-sm">
                 <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Calendar className="h-4 w-4 text-gray-500" />
                   <div>
-                    <div className="font-medium">Target Close</div>
-                    <div className="text-muted-foreground">
+                    <div className="font-medium text-bb-dark-gray">Target Close</div>
+                    <div className="text-gray-600">
                       {new Date(deal.targetClose).toLocaleDateString()}
                     </div>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <Users className="h-4 w-4 text-gray-500" />
                   <div>
-                    <div className="font-medium">{deal.userCount} Users</div>
-                    <div className="text-muted-foreground">Active participants</div>
+                    <div className="font-medium text-bb-dark-gray">{deal.userCount} Users</div>
+                    <div className="text-gray-600">Active participants</div>
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <FileText className="h-4 w-4 text-gray-500" />
                   <div>
-                    <div className="font-medium">{deal.requestCount} Requests</div>
-                    <div className="text-muted-foreground">Total diligence items</div>
+                    <div className="font-medium text-bb-dark-gray">{deal.requestCount} Requests</div>
+                    <div className="text-gray-600">Total diligence items</div>
                   </div>
                 </div>
               </div>
 
               <div className="flex space-x-2 pt-2">
-                <Button variant="outline" size="sm">View Details</Button>
-                <Button variant="outline" size="sm">Manage Users</Button>
-                <Button variant="outline" size="sm">Export Data</Button>
+                <Button variant="outline" size="sm" className="border-bb-red text-bb-red hover:bg-bb-red hover:text-white">
+                  View Details
+                </Button>
+                <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50">
+                  Manage Users
+                </Button>
+                <Button variant="outline" size="sm" className="border-gray-300 hover:bg-gray-50">
+                  Export Data
+                </Button>
               </div>
             </CardContent>
           </Card>

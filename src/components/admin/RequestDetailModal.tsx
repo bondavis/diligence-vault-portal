@@ -24,6 +24,7 @@ export const RequestDetailModal = ({
 }: RequestDetailModalProps) => {
   const [request, setRequest] = useState<any>(null);
   const [response, setResponse] = useState<any>(null);
+  const [assignedUser, setAssignedUser] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -38,17 +39,28 @@ export const RequestDetailModal = ({
     try {
       setLoading(true);
       
-      // Load request with assigned user info
+      // Load request
       const { data: requestData, error: requestError } = await supabase
         .from('diligence_requests')
-        .select(`
-          *,
-          profiles:assigned_to(name, email)
-        `)
+        .select('*')
         .eq('id', requestId)
         .single();
 
       if (requestError) throw requestError;
+
+      // Load assigned user if exists
+      let assignedUserData = null;
+      if (requestData.assigned_to) {
+        const { data: userData, error: userError } = await supabase
+          .from('profiles')
+          .select('name, email')
+          .eq('id', requestData.assigned_to)
+          .single();
+
+        if (!userError) {
+          assignedUserData = userData;
+        }
+      }
 
       // Load user response if exists
       const { data: responseData, error: responseError } = await supabase
@@ -60,6 +72,7 @@ export const RequestDetailModal = ({
       if (responseError && responseError.code !== 'PGRST116') throw responseError;
 
       setRequest(requestData);
+      setAssignedUser(assignedUserData);
       setResponse(responseData);
     } catch (error) {
       console.error('Error loading request details:', error);
@@ -142,10 +155,10 @@ export const RequestDetailModal = ({
                   <User className="h-4 w-4 mr-2" />
                   Assigned To
                 </h4>
-                {request.profiles ? (
+                {assignedUser ? (
                   <div>
-                    <div className="font-medium">{request.profiles.name}</div>
-                    <div className="text-sm text-gray-500">{request.profiles.email}</div>
+                    <div className="font-medium">{assignedUser.name}</div>
+                    <div className="text-sm text-gray-500">{assignedUser.email}</div>
                   </div>
                 ) : (
                   <Badge variant="outline" className="text-amber-600">

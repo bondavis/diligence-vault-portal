@@ -56,7 +56,7 @@ export const RequestAssignmentModal = ({
     try {
       const { data, error } = await supabase
         .from('diligence_requests')
-        .select('*, profiles:assigned_to(name, email)')
+        .select('*')
         .eq('id', requestId)
         .single();
 

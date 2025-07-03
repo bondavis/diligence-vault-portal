@@ -29,7 +29,8 @@ interface DiligenceRequest {
   due_date: string | null;
   assigned_to: string | null;
   created_at: string;
-  profiles?: {
+  updated_at: string;
+  assignedUser?: {
     name: string;
     email: string;
   };
@@ -67,21 +68,15 @@ export const RequestManagementTable = () => {
     try {
       setLoading(true);
       
-      // Load requests with assigned user info
+      // Load requests first
       const { data: requestsData, error: requestsError } = await supabase
         .from('diligence_requests')
-        .select(`
-          *,
-          profiles:assigned_to (
-            name,
-            email
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (requestsError) throw requestsError;
 
-      // Load all users for assignment
+      // Load all users for assignment and to match with assigned_to
       const { data: usersData, error: usersError } = await supabase
         .from('profiles')
         .select('id, name, email')
@@ -89,7 +84,16 @@ export const RequestManagementTable = () => {
 
       if (usersError) throw usersError;
 
-      setRequests(requestsData || []);
+      // Create a map of users for quick lookup
+      const userMap = new Map(usersData?.map(user => [user.id, user]) || []);
+
+      // Combine requests with user information
+      const requestsWithUsers = requestsData?.map(request => ({
+        ...request,
+        assignedUser: request.assigned_to ? userMap.get(request.assigned_to) : undefined
+      })) || [];
+
+      setRequests(requestsWithUsers);
       setUsers(usersData || []);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -276,10 +280,10 @@ export const RequestManagementTable = () => {
                   </Badge>
                 </TableCell>
                 <TableCell>
-                  {request.profiles ? (
+                  {request.assignedUser ? (
                     <div className="text-sm">
-                      <div className="font-medium">{request.profiles.name}</div>
-                      <div className="text-gray-500">{request.profiles.email}</div>
+                      <div className="font-medium">{request.assignedUser.name}</div>
+                      <div className="text-gray-500">{request.assignedUser.email}</div>
                     </div>
                   ) : (
                     <Badge variant="outline" className="text-amber-600">

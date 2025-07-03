@@ -16,8 +16,7 @@ import { Input } from '@/components/ui/input';
 import { RequestFilters } from './RequestFilters';
 import { RequestAssignmentModal } from './RequestAssignmentModal';
 import { RequestDetailModal } from './RequestDetailModal';
-import { BulkOperationsPanel } from './BulkOperationsPanel';
-import { Eye, UserPlus, Clock, AlertCircle, CheckCircle } from 'lucide-react';
+import { Eye, UserPlus, Clock, AlertCircle, CheckCircle, FileX, FileCheck } from 'lucide-react';
 
 interface DiligenceRequest {
   id: string;
@@ -36,6 +35,9 @@ interface DiligenceRequest {
     name: string;
     email: string;
   };
+  document_count?: number;
+  has_response?: boolean;
+  computed_status?: string;
 }
 
 interface User {
@@ -48,7 +50,6 @@ export const RequestManagementTable = () => {
   const [requests, setRequests] = useState<DiligenceRequest[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
@@ -66,14 +67,27 @@ export const RequestManagementTable = () => {
     loadData();
   }, []);
 
+  const computeRequestStatus = (request: DiligenceRequest) => {
+    const hasDocuments = (request.document_count || 0) > 0;
+    const hasResponse = request.has_response;
+    
+    if (request.status === 'approved') return 'Accepted';
+    if (hasDocuments || hasResponse) return 'Review Pending';
+    return 'Incomplete';
+  };
+
   const loadData = async () => {
     try {
       setLoading(true);
       
-      // Load requests first
+      // Load requests with document counts and response status
       const { data: requestsData, error: requestsError } = await supabase
         .from('diligence_requests')
-        .select('*')
+        .select(`
+          *,
+          request_documents!inner(count),
+          diligence_responses!inner(count)
+        `)
         .order('created_at', { ascending: false });
 
       if (requestsError) throw requestsError;
@@ -89,13 +103,37 @@ export const RequestManagementTable = () => {
       // Create a map of users for quick lookup
       const userMap = new Map(usersData?.map(user => [user.id, user]) || []);
 
-      // Combine requests with user information
-      const requestsWithUsers = requestsData?.map(request => ({
-        ...request,
-        assignedUser: request.assigned_to ? userMap.get(request.assigned_to) : undefined
-      })) || [];
+      // Get document counts and response status for each request
+      const requestsWithCounts = await Promise.all(
+        (requestsData || []).map(async (request) => {
+          // Get document count
+          const { count: docCount } = await supabase
+            .from('request_documents')
+            .select('*', { count: 'exact', head: true })
+            .eq('request_id', request.id);
 
-      setRequests(requestsWithUsers);
+          // Check if has response
+          const { data: responseData } = await supabase
+            .from('diligence_responses')
+            .select('id')
+            .eq('request_id', request.id)
+            .maybeSingle();
+
+          const enrichedRequest = {
+            ...request,
+            assignedUser: request.assigned_to ? userMap.get(request.assigned_to) : undefined,
+            document_count: docCount || 0,
+            has_response: !!responseData
+          };
+
+          return {
+            ...enrichedRequest,
+            computed_status: computeRequestStatus(enrichedRequest)
+          };
+        })
+      );
+
+      setRequests(requestsWithCounts);
       setUsers(usersData || []);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -123,22 +161,6 @@ export const RequestManagementTable = () => {
 
     return matchesSearch && matchesCategory && matchesPriority && matchesStatus && matchesAssigned;
   });
-
-  const handleSelectRequest = (requestId: string) => {
-    setSelectedRequests(prev => 
-      prev.includes(requestId) 
-        ? prev.filter(id => id !== requestId)
-        : [...prev, requestId]
-    );
-  };
-
-  const handleSelectAll = () => {
-    setSelectedRequests(
-      selectedRequests.length === filteredRequests.length 
-        ? [] 
-        : filteredRequests.map(r => r.id)
-    );
-  };
 
   const handleRowClick = (requestId: string) => {
     setSelectedRequestId(requestId);
@@ -170,30 +192,33 @@ export const RequestManagementTable = () => {
     return 'Period not set';
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityBadge = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'high': 
+        return <Badge className="bg-red-500 text-white hover:bg-red-600">HIGH</Badge>;
+      case 'medium': 
+        return <Badge className="bg-orange-500 text-white hover:bg-orange-600">MEDIUM</Badge>;
+      case 'low': 
+        return <Badge className="bg-green-500 text-white hover:bg-green-600">LOW</Badge>;
+      default: 
+        return <Badge variant="outline">{priority.toUpperCase()}</Badge>;
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'pending': return <Clock className="h-4 w-4" />;
-      case 'submitted': return <AlertCircle className="h-4 w-4" />;
-      case 'approved': return <CheckCircle className="h-4 w-4" />;
+      case 'Incomplete': return <FileX className="h-4 w-4" />;
+      case 'Review Pending': return <AlertCircle className="h-4 w-4" />;
+      case 'Accepted': return <CheckCircle className="h-4 w-4" />;
       default: return <Clock className="h-4 w-4" />;
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-amber-100 text-amber-800';
-      case 'submitted': return 'bg-blue-100 text-blue-800';
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
+      case 'Incomplete': return 'bg-gray-100 text-gray-800';
+      case 'Review Pending': return 'bg-blue-100 text-blue-800';
+      case 'Accepted': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -215,17 +240,6 @@ export const RequestManagementTable = () => {
           />
           <RequestFilters filters={filters} onFiltersChange={setFilters} />
         </div>
-        
-        {selectedRequests.length > 0 && (
-          <BulkOperationsPanel
-            selectedRequests={selectedRequests}
-            users={users}
-            onOperationComplete={() => {
-              setSelectedRequests([]);
-              loadData();
-            }}
-          />
-        )}
       </div>
 
       {/* Summary Stats */}
@@ -242,9 +256,9 @@ export const RequestManagementTable = () => {
         </div>
         <div className="bg-green-50 p-4 rounded-lg">
           <div className="text-2xl font-bold text-green-600">
-            {requests.filter(r => r.status === 'approved').length}
+            {requests.filter(r => r.computed_status === 'Accepted').length}
           </div>
-          <div className="text-sm text-green-600">Completed</div>
+          <div className="text-sm text-green-600">Accepted</div>
         </div>
         <div className="bg-red-50 p-4 rounded-lg">
           <div className="text-2xl font-bold text-red-600">
@@ -259,14 +273,6 @@ export const RequestManagementTable = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-12">
-                <input
-                  type="checkbox"
-                  checked={selectedRequests.length === filteredRequests.length && filteredRequests.length > 0}
-                  onChange={handleSelectAll}
-                  className="rounded"
-                />
-              </TableHead>
               <TableHead>Title</TableHead>
               <TableHead>Period</TableHead>
               <TableHead>Category</TableHead>
@@ -283,14 +289,6 @@ export const RequestManagementTable = () => {
                 className="cursor-pointer hover:bg-gray-50 transition-colors"
                 onClick={() => handleRowClick(request.id)}
               >
-                <TableCell onClick={(e) => e.stopPropagation()}>
-                  <input
-                    type="checkbox"
-                    checked={selectedRequests.includes(request.id)}
-                    onChange={() => handleSelectRequest(request.id)}
-                    className="rounded"
-                  />
-                </TableCell>
                 <TableCell>
                   <div className="font-medium">{request.title}</div>
                   {request.description && (
@@ -308,15 +306,13 @@ export const RequestManagementTable = () => {
                   <Badge variant="outline">{request.category}</Badge>
                 </TableCell>
                 <TableCell>
-                  <Badge className={getPriorityColor(request.priority)}>
-                    {request.priority.toUpperCase()}
-                  </Badge>
+                  {getPriorityBadge(request.priority)}
                 </TableCell>
                 <TableCell>
-                  <Badge className={getStatusColor(request.status)}>
+                  <Badge className={getStatusColor(request.computed_status || 'pending')}>
                     <div className="flex items-center space-x-1">
-                      {getStatusIcon(request.status)}
-                      <span className="capitalize">{request.status}</span>
+                      {getStatusIcon(request.computed_status || 'pending')}
+                      <span>{request.computed_status}</span>
                     </div>
                   </Badge>
                 </TableCell>

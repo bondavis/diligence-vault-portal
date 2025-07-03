@@ -9,12 +9,13 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
+import { Card, CardContent } from '@/components/ui/card';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { FileUploadZone } from '../upload/FileUploadZone';
 import { DocumentList } from './DocumentList';
-import { Clock, AlertCircle, CheckCircle, User, Calendar, FileText, Upload } from 'lucide-react';
+import { User, Calendar, FileText, Send } from 'lucide-react';
 
 interface RequestDetailModalProps {
   open: boolean;
@@ -33,8 +34,9 @@ export const RequestDetailModal = ({
   const [response, setResponse] = useState<any>(null);
   const [assignedUser, setAssignedUser] = useState<any>(null);
   const [documents, setDocuments] = useState<any[]>([]);
+  const [textResponse, setTextResponse] = useState('');
   const [loading, setLoading] = useState(false);
-  const [uploading, setUploading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -94,6 +96,7 @@ export const RequestDetailModal = ({
       setAssignedUser(assignedUserData);
       setResponse(responseData);
       setDocuments(documentsData || []);
+      setTextResponse(responseData?.text_response || '');
     } catch (error) {
       console.error('Error loading request details:', error);
       toast({
@@ -103,6 +106,57 @@ export const RequestDetailModal = ({
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleTextResponseSubmit = async () => {
+    if (!requestId || !textResponse.trim()) return;
+
+    try {
+      setSubmitting(true);
+      
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      if (response) {
+        // Update existing response
+        const { error } = await supabase
+          .from('diligence_responses')
+          .update({ text_response: textResponse })
+          .eq('id', response.id);
+
+        if (error) throw error;
+      } else {
+        // Create new response
+        const { error } = await supabase
+          .from('diligence_responses')
+          .insert({
+            request_id: requestId,
+            user_id: user.id,
+            text_response: textResponse
+          });
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: "Success",
+        description: "Response submitted successfully",
+      });
+
+      loadRequestDetails();
+      if (onRequestUpdate) {
+        onRequestUpdate();
+      }
+    } catch (error) {
+      console.error('Error submitting response:', error);
+      toast({
+        title: "Error",
+        description: "Failed to submit response",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -131,31 +185,38 @@ export const RequestDetailModal = ({
     return 'Period not set';
   };
 
-  const getPriorityColor = (priority: string) => {
+  const getPriorityBadge = (priority: string) => {
     switch (priority) {
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'low': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'high': 
+        return <Badge className="bg-red-500 text-white">HIGH</Badge>;
+      case 'medium': 
+        return <Badge className="bg-orange-500 text-white">MEDIUM</Badge>;
+      case 'low': 
+        return <Badge className="bg-green-500 text-white">LOW</Badge>;
+      default: 
+        return <Badge variant="outline">{priority?.toUpperCase()}</Badge>;
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending': return <Clock className="h-4 w-4" />;
-      case 'submitted': return <AlertCircle className="h-4 w-4" />;
-      case 'approved': return <CheckCircle className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
+  const computeStatus = () => {
+    const hasDocuments = documents.length > 0;
+    const hasResponse = response?.text_response;
+    
+    if (request?.status === 'approved') return 'Accepted';
+    if (hasDocuments || hasResponse) return 'Review Pending';
+    return 'Incomplete';
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case 'pending': return 'bg-amber-100 text-amber-800';
-      case 'submitted': return 'bg-blue-100 text-blue-800';
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'Incomplete': 
+        return <Badge className="bg-gray-100 text-gray-800">Incomplete</Badge>;
+      case 'Review Pending': 
+        return <Badge className="bg-blue-100 text-blue-800">Review Pending</Badge>;
+      case 'Accepted': 
+        return <Badge className="bg-green-100 text-green-800">Accepted</Badge>;
+      default: 
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
@@ -170,8 +231,8 @@ export const RequestDetailModal = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Request Details</DialogTitle>
-          <DialogDescription>
+          <DialogTitle className="sr-only">Request Details</DialogTitle>
+          <DialogDescription className="sr-only">
             Complete information and document management for this diligence request
           </DialogDescription>
         </DialogHeader>
@@ -180,158 +241,112 @@ export const RequestDetailModal = ({
           <div className="p-6">Loading request details...</div>
         ) : request ? (
           <div className="space-y-6">
-            {/* Request Header */}
-            <div>
-              <h3 className="text-lg font-semibold mb-2">{request.title}</h3>
-              <div className="flex items-center space-x-4 mb-4">
-                <Badge variant="outline">{request.category}</Badge>
-                <Badge className={getPriorityColor(request.priority)}>
-                  {request.priority.toUpperCase()}
-                </Badge>
-                <Badge className={getStatusColor(request.status)}>
-                  <div className="flex items-center space-x-1">
-                    {getStatusIcon(request.status)}
-                    <span className="capitalize">{request.status}</span>
-                  </div>
-                </Badge>
+            {/* Title */}
+            <h1 className="text-2xl font-bold text-gray-900">{request.title}</h1>
+
+            {/* Description */}
+            {request.description && (
+              <div className="text-gray-700 whitespace-pre-wrap text-base leading-relaxed">
+                {request.description}
               </div>
+            )}
+
+            {/* Period */}
+            <div className="flex items-center space-x-2 text-lg">
+              <Calendar className="h-5 w-5 text-gray-500" />
+              <span className="font-medium text-gray-900">
+                {formatPeriod(request.period_start, request.period_end)}
+              </span>
             </div>
 
-            <Tabs defaultValue="details" className="w-full">
-              <TabsList className="grid w-full grid-cols-3">
-                <TabsTrigger value="details" className="flex items-center space-x-2">
-                  <FileText className="h-4 w-4" />
-                  <span>Details</span>
-                </TabsTrigger>
-                <TabsTrigger value="documents" className="flex items-center space-x-2">
-                  <Upload className="h-4 w-4" />
-                  <span>Documents ({documents.length})</span>
-                </TabsTrigger>
-                <TabsTrigger value="response" className="flex items-center space-x-2">
-                  <CheckCircle className="h-4 w-4" />
-                  <span>Response</span>
-                </TabsTrigger>
-              </TabsList>
+            {/* Info Row - Priority, Category, Status */}
+            <div className="flex items-center space-x-4">
+              {getPriorityBadge(request.priority)}
+              <Badge variant="outline" className="text-base px-3 py-1">
+                {request.category}
+              </Badge>
+              {getStatusBadge(computeStatus())}
+            </div>
 
-              <TabsContent value="details" className="space-y-4">
-                {/* Description */}
-                {request.description && (
-                  <div>
-                    <h4 className="font-medium mb-2">Description</h4>
-                    <p className="text-gray-700 whitespace-pre-wrap">{request.description}</p>
-                  </div>
-                )}
+            {/* Assignment Info */}
+            {assignedUser && (
+              <div className="flex items-center space-x-2">
+                <User className="h-4 w-4 text-gray-500" />
+                <span className="text-sm text-gray-600">
+                  Assigned to <span className="font-medium">{assignedUser.name}</span> ({assignedUser.email})
+                </span>
+              </div>
+            )}
 
-                {/* Assignment and Dates */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <h4 className="font-medium mb-2 flex items-center">
-                      <User className="h-4 w-4 mr-2" />
-                      Assigned To
-                    </h4>
-                    {assignedUser ? (
-                      <div>
-                        <div className="font-medium">{assignedUser.name}</div>
-                        <div className="text-sm text-gray-500">{assignedUser.email}</div>
-                      </div>
-                    ) : (
-                      <Badge variant="outline" className="text-amber-600">
-                        Unassigned
-                      </Badge>
-                    )}
-                  </div>
+            {/* Upload Zone - Always Visible */}
+            {request.allow_file_upload && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-medium text-lg mb-4 flex items-center">
+                    <FileText className="h-5 w-5 mr-2" />
+                    Upload Documents
+                  </h3>
+                  <FileUploadZone 
+                    requestId={requestId!} 
+                    onUploadComplete={handleUploadComplete}
+                  />
+                </CardContent>
+              </Card>
+            )}
 
-                  <div>
-                    <h4 className="font-medium mb-2 flex items-center">
-                      <Calendar className="h-4 w-4 mr-2" />
-                      Period
-                    </h4>
-                    <div className="text-sm">
-                      {formatPeriod(request.period_start, request.period_end)}
-                    </div>
-                  </div>
-                </div>
-
-                {/* Due Date */}
-                {request.due_date && (
-                  <div>
-                    <h4 className="font-medium mb-2">Due Date</h4>
-                    <div className={`${
-                      new Date(request.due_date) < new Date() ? 'text-red-600 font-medium' : ''
-                    }`}>
-                      {new Date(request.due_date).toLocaleDateString()}
-                      {new Date(request.due_date) < new Date() && (
-                        <span className="text-red-600 text-sm ml-2">(Overdue)</span>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* Upload/Response Options */}
-                <div>
-                  <h4 className="font-medium mb-2">Response Options</h4>
-                  <div className="flex space-x-4">
-                    <Badge variant={request.allow_file_upload ? "default" : "secondary"}>
-                      File Upload: {request.allow_file_upload ? 'Enabled' : 'Disabled'}
-                    </Badge>
-                    <Badge variant={request.allow_text_response ? "default" : "secondary"}>
-                      Text Response: {request.allow_text_response ? 'Enabled' : 'Disabled'}
-                    </Badge>
-                  </div>
-                </div>
-
-                {/* Timestamps */}
-                <div className="text-sm text-gray-500 pt-4 border-t">
-                  <div>Created: {new Date(request.created_at).toLocaleString()}</div>
-                  <div>Last Updated: {new Date(request.updated_at).toLocaleString()}</div>
-                </div>
-              </TabsContent>
-
-              <TabsContent value="documents" className="space-y-4">
-                <div className="space-y-4">
-                  {request.allow_file_upload && (
-                    <div>
-                      <h4 className="font-medium mb-4">Upload Documents</h4>
-                      <FileUploadZone 
-                        requestId={requestId!} 
-                        onUploadComplete={handleUploadComplete}
-                      />
-                    </div>
-                  )}
-                  
-                  <div>
-                    <h4 className="font-medium mb-4">Uploaded Documents</h4>
-                    <DocumentList 
-                      documents={documents} 
-                      onDocumentUpdate={loadRequestDetails}
+            {/* Text Response Box */}
+            {request.allow_text_response && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-medium text-lg mb-4">Text Response</h3>
+                  <div className="space-y-4">
+                    <Textarea
+                      placeholder="Enter your response here..."
+                      value={textResponse}
+                      onChange={(e) => setTextResponse(e.target.value)}
+                      className="min-h-[120px] resize-none"
                     />
+                    <Button 
+                      onClick={handleTextResponseSubmit}
+                      disabled={submitting || !textResponse.trim()}
+                      className="flex items-center space-x-2"
+                    >
+                      <Send className="h-4 w-4" />
+                      <span>{response ? 'Update Response' : 'Submit Response'}</span>
+                    </Button>
                   </div>
-                </div>
-              </TabsContent>
+                </CardContent>
+              </Card>
+            )}
 
-              <TabsContent value="response" className="space-y-4">
-                {response ? (
-                  <div>
-                    <h4 className="font-medium mb-2">User Response</h4>
-                    <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="text-sm text-gray-600 mb-2">
-                        Submitted on {new Date(response.submitted_at).toLocaleString()}
-                      </div>
-                      {response.text_response && (
-                        <div>
-                          <h5 className="font-medium mb-1">Text Response:</h5>
-                          <p className="whitespace-pre-wrap">{response.text_response}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    No response submitted yet
-                  </div>
-                )}
-              </TabsContent>
-            </Tabs>
+            {/* Uploaded Documents */}
+            {documents.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-medium text-lg mb-4">Uploaded Documents</h3>
+                  <DocumentList 
+                    documents={documents} 
+                    onDocumentUpdate={loadRequestDetails}
+                  />
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Due Date and Timestamps */}
+            <div className="text-sm text-gray-500 pt-4 border-t space-y-1">
+              {request.due_date && (
+                <div className={`${
+                  new Date(request.due_date) < new Date() ? 'text-red-600 font-medium' : ''
+                }`}>
+                  Due: {new Date(request.due_date).toLocaleDateString()}
+                  {new Date(request.due_date) < new Date() && (
+                    <span className="text-red-600 ml-2">(Overdue)</span>
+                  )}
+                </div>
+              )}
+              <div>Created: {new Date(request.created_at).toLocaleString()}</div>
+              <div>Last Updated: {new Date(request.updated_at).toLocaleString()}</div>
+            </div>
           </div>
         ) : (
           <div className="p-6">Request not found</div>

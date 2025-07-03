@@ -1,13 +1,13 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, Calendar, Building, FileText, AlertCircle, CheckCircle, Clock, Plus, Upload } from 'lucide-react';
+import { ArrowLeft, Calendar, Building, FileText, AlertCircle, CheckCircle, Clock, Plus, Upload, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { RequestDetailModal } from './RequestDetailModal';
+import { RequestFilters } from './RequestFilters';
 import { templateService } from '@/services/templateService';
 import { Database } from '@/integrations/supabase/types';
 
@@ -18,6 +18,7 @@ type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'
 };
 
 type RequestPriority = Database['public']['Enums']['request_priority'];
+type RequestCategory = Database['public']['Enums']['request_category'];
 
 interface Deal {
   id: string;
@@ -45,15 +46,26 @@ interface DealDetailViewProps {
 
 export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailViewProps) => {
   const [requests, setRequests] = useState<DiligenceRequest[]>([]);
+  const [filteredRequests, setFilteredRequests] = useState<DiligenceRequest[]>([]);
   const [categoryProgress, setCategoryProgress] = useState<CategoryProgress[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<DiligenceRequest | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeFilters, setActiveFilters] = useState<{
+    priority?: RequestPriority;
+    category?: RequestCategory;
+    status?: string;
+  }>({});
   const { toast } = useToast();
 
   useEffect(() => {
     loadDealRequests();
   }, [deal.id]);
+
+  useEffect(() => {
+    applyFilters();
+  }, [requests, activeFilters]);
 
   const computeRequestStatus = (request: DiligenceRequest) => {
     const hasDocuments = (request.document_count || 0) > 0;
@@ -62,6 +74,41 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
     if (request.status === 'approved') return 'Accepted';
     if (hasDocuments || hasResponse) return 'Review Pending';
     return 'Incomplete';
+  };
+
+  const applyFilters = () => {
+    let filtered = [...requests];
+
+    if (activeFilters.priority) {
+      filtered = filtered.filter(req => req.priority === activeFilters.priority);
+    }
+
+    if (activeFilters.category) {
+      filtered = filtered.filter(req => req.category === activeFilters.category);
+    }
+
+    if (activeFilters.status) {
+      filtered = filtered.filter(req => req.computed_status === activeFilters.status);
+    }
+
+    setFilteredRequests(filtered);
+  };
+
+  const getRequestCounts = () => {
+    const total = requests.length;
+    const high = requests.filter(r => r.priority === 'high').length;
+    const medium = requests.filter(r => r.priority === 'medium').length;
+    const low = requests.filter(r => r.priority === 'low').length;
+
+    const byCategory: Record<string, number> = {};
+    const byStatus: Record<string, number> = {};
+
+    requests.forEach(req => {
+      byCategory[req.category] = (byCategory[req.category] || 0) + 1;
+      byStatus[req.computed_status || 'pending'] = (byStatus[req.computed_status || 'pending'] || 0) + 1;
+    });
+
+    return { total, high, medium, low, byCategory, byStatus };
   };
 
   const loadDealRequests = async () => {
@@ -308,21 +355,48 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
       {/* Requests List */}
       <Card>
         <CardHeader>
-          <CardTitle>Diligence Requests</CardTitle>
-          <CardDescription>
-            All diligence requests for this deal
-          </CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Diligence Requests</CardTitle>
+              <CardDescription>
+                {filteredRequests.length} of {requests.length} requests
+                {Object.keys(activeFilters).some(key => activeFilters[key as keyof typeof activeFilters]) && 
+                  ' (filtered)'}
+              </CardDescription>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowFilters(!showFilters)}
+            >
+              <Filter className="h-4 w-4 mr-2" />
+              Filters
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
+          {showFilters && (
+            <div className="mb-6 p-4 border rounded-lg bg-gray-50">
+              <RequestFilters
+                activeFilters={activeFilters}
+                onFilterChange={setActiveFilters}
+                requestCounts={getRequestCounts()}
+              />
+            </div>
+          )}
+
           {loading ? (
             <div className="text-center py-8">Loading requests...</div>
-          ) : requests.length === 0 ? (
+          ) : filteredRequests.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
-              No diligence requests found for this deal.
+              {requests.length === 0 
+                ? "No diligence requests found for this deal."
+                : "No requests match the current filters."
+              }
             </div>
           ) : (
             <div className="space-y-4">
-              {requests.map((request) => (
+              {filteredRequests.map((request) => (
                 <div 
                   key={request.id} 
                   className="border rounded-lg p-4 hover:bg-gray-50 transition-colors cursor-pointer"

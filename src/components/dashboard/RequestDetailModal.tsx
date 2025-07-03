@@ -7,15 +7,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Upload, Download, Calendar, AlertCircle, CheckCircle, Clock } from 'lucide-react';
+import { FileText, Calendar, AlertCircle, CheckCircle, Clock, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { FileUploadZone } from '../upload/FileUploadZone';
 import { Database } from '@/integrations/supabase/types';
 
 type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'];
 type RequestStatus = Database['public']['Enums']['request_status'];
 type RequestPriority = Database['public']['Enums']['request_priority'];
-type RequestCategory = Database['public']['Enums']['request_category'];
 
 interface RequestDetailModalProps {
   request: DiligenceRequest | null;
@@ -79,7 +79,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
     }
   };
 
-  const handleTextSubmit = async () => {
+  const handleSubmit = async () => {
     if (!request || !textResponse.trim()) return;
 
     try {
@@ -96,7 +96,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
 
       toast({
         title: "Success",
-        description: "Response submitted successfully",
+        description: "Seller commentary submitted successfully",
       });
 
       onUpdate?.();
@@ -104,7 +104,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
       console.error('Error submitting response:', error);
       toast({
         title: "Error",
-        description: "Failed to submit response",
+        description: "Failed to submit seller commentary",
         variant: "destructive",
       });
     } finally {
@@ -173,6 +173,11 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
     }
   };
 
+  const handleUploadComplete = () => {
+    loadRequestData();
+    onUpdate?.();
+  };
+
   const getPriorityBadge = (priority: RequestPriority) => {
     switch (priority) {
       case 'high': 
@@ -203,100 +208,88 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center justify-between">
-            <span>{editMode ? 'Edit Request' : request.title}</span>
+            <span>{editMode ? (
+              <Input
+                value={editData.title || ''}
+                onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                className="text-xl font-semibold"
+              />
+            ) : request.title}</span>
             <div className="flex items-center space-x-2">
               {getPriorityBadge(request.priority)}
               <Badge variant="outline" className="flex items-center space-x-1">
                 {getStatusIcon(request.status)}
                 <span>{request.status.toUpperCase()}</span>
               </Badge>
+              <Badge variant="outline">{request.category}</Badge>
             </div>
           </DialogTitle>
         </DialogHeader>
 
         <div className="space-y-6">
-          {/* Request Details */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label>Category</Label>
-              <p className="text-sm text-gray-600">{request.category}</p>
-            </div>
-            <div>
-              <Label>Created</Label>
-              <p className="text-sm text-gray-600">
-                {new Date(request.created_at).toLocaleDateString()}
+          {/* Description */}
+          <div>
+            <Label className="text-base font-medium">Description</Label>
+            {editMode && isAdmin ? (
+              <Textarea
+                value={editData.description || ''}
+                onChange={(e) => setEditData({ ...editData, description: e.target.value })}
+                rows={3}
+                className="mt-2"
+              />
+            ) : (
+              <p className="text-sm text-gray-600 whitespace-pre-wrap mt-2">
+                {request.description || 'No description provided'}
               </p>
-            </div>
-            {request.due_date && (
-              <div>
-                <Label>Due Date</Label>
-                <p className="text-sm text-gray-600">
-                  {new Date(request.due_date).toLocaleDateString()}
-                </p>
-              </div>
-            )}
-            {request.period_text && (
-              <div>
-                <Label>Period</Label>
-                <p className="text-sm text-gray-600">{request.period_text}</p>
-              </div>
             )}
           </div>
 
-          {/* Edit Mode */}
-          {editMode && isAdmin ? (
-            <div className="space-y-4 border rounded-lg p-4 bg-gray-50">
-              <h3 className="font-medium">Edit Request Details</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="edit-title">Title</Label>
-                  <Input
-                    id="edit-title"
-                    value={editData.title || ''}
-                    onChange={(e) => setEditData({ ...editData, title: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-priority">Priority</Label>
-                  <Select value={editData.priority} onValueChange={(value: RequestPriority) => setEditData({ ...editData, priority: value })}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="high">High</SelectItem>
-                      <SelectItem value="medium">Medium</SelectItem>
-                      <SelectItem value="low">Low</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div>
-                  <Label htmlFor="edit-due-date">Due Date</Label>
-                  <Input
-                    id="edit-due-date"
-                    type="date"
-                    value={editData.due_date || ''}
-                    onChange={(e) => setEditData({ ...editData, due_date: e.target.value })}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="edit-period">Period</Label>
-                  <Input
-                    id="edit-period"
-                    value={editData.period_text || ''}
-                    onChange={(e) => setEditData({ ...editData, period_text: e.target.value })}
-                  />
-                </div>
+          {/* Period */}
+          <div className="flex items-center space-x-2">
+            <Calendar className="h-5 w-5 text-gray-500" />
+            <div className="flex-1">
+              <Label className="text-base font-medium">Period</Label>
+              {editMode && isAdmin ? (
+                <Input
+                  value={editData.period_text || ''}
+                  onChange={(e) => setEditData({ ...editData, period_text: e.target.value })}
+                  placeholder="e.g., Last 2 Years, 13 Months, etc."
+                  className="mt-1"
+                />
+              ) : (
+                <p className="text-sm text-gray-600 mt-1">
+                  {request.period_text || 'No period specified'}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Edit Mode Controls */}
+          {editMode && isAdmin && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 border rounded-lg bg-gray-50">
+              <div>
+                <Label htmlFor="edit-priority">Priority</Label>
+                <Select value={editData.priority} onValueChange={(value: RequestPriority) => setEditData({ ...editData, priority: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <Label htmlFor="edit-description">Description</Label>
-                <Textarea
-                  id="edit-description"
-                  value={editData.description || ''}
-                  onChange={(e) => setEditData({ ...editData, description: e.target.value })}
-                  rows={3}
+                <Label htmlFor="edit-due-date">Due Date</Label>
+                <Input
+                  id="edit-due-date"
+                  type="date"
+                  value={editData.due_date || ''}
+                  onChange={(e) => setEditData({ ...editData, due_date: e.target.value })}
                 />
               </div>
-              <div className="flex space-x-2">
+              <div className="flex space-x-2 col-span-full">
                 <Button onClick={handleSaveEdit} disabled={loading}>
                   Save Changes
                 </Button>
@@ -305,12 +298,51 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
                 </Button>
               </div>
             </div>
-          ) : (
+          )}
+
+          {/* File Upload Zone - Now at the top */}
+          {request.allow_file_upload && (
             <div>
-              <Label>Description</Label>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">
-                {request.description || 'No description provided'}
-              </p>
+              <Label className="text-base font-medium mb-4 block">Document Upload</Label>
+              <FileUploadZone 
+                requestId={request.id} 
+                onUploadComplete={handleUploadComplete}
+              />
+            </div>
+          )}
+
+          {/* Uploaded Documents List */}
+          {documents.length > 0 && (
+            <div>
+              <Label className="text-base font-medium">Uploaded Documents ({documents.length})</Label>
+              <div className="mt-2 space-y-2 max-h-32 overflow-y-auto">
+                {documents.map((doc) => (
+                  <div key={doc.id} className="flex items-center justify-between p-2 border rounded text-sm">
+                    <div className="flex items-center space-x-2">
+                      <FileText className="h-4 w-4" />
+                      <span>{doc.filename}</span>
+                      <span className="text-gray-500">({(doc.file_size / 1024 / 1024).toFixed(2)} MB)</span>
+                    </div>
+                    <span className="text-xs text-gray-500">
+                      {new Date(doc.uploaded_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Seller Commentary (renamed from Text Response) */}
+          {request.allow_text_response && (
+            <div>
+              <Label className="text-base font-medium">Seller Commentary</Label>
+              <Textarea
+                placeholder="Please provide your commentary or response here..."
+                value={textResponse}
+                onChange={(e) => setTextResponse(e.target.value)}
+                rows={4}
+                className="mt-2"
+              />
             </div>
           )}
 
@@ -334,54 +366,33 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
             </div>
           )}
 
-          {/* Text Response */}
-          {request.allow_text_response && (
-            <div className="space-y-2">
-              <Label htmlFor="text-response">Text Response</Label>
-              <Textarea
-                id="text-response"
-                placeholder="Enter your response..."
-                value={textResponse}
-                onChange={(e) => setTextResponse(e.target.value)}
-                rows={4}
-              />
-              <Button onClick={handleTextSubmit} disabled={loading || !textResponse.trim()}>
-                Submit Response
-              </Button>
-            </div>
-          )}
+          {/* Submit Button - At the bottom */}
+          <div className="flex justify-end border-t pt-4">
+            <Button 
+              onClick={handleSubmit} 
+              disabled={loading || !textResponse.trim()}
+              className="flex items-center space-x-2"
+            >
+              <Send className="h-4 w-4" />
+              <span>Submit</span>
+            </Button>
+          </div>
 
-          {/* File Upload (placeholder for now) */}
-          {request.allow_file_upload && (
-            <div className="space-y-2">
-              <Label>File Upload</Label>
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-                <Upload className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                <p className="text-sm text-gray-500">File upload functionality coming soon</p>
+          {/* Request Metadata */}
+          <div className="text-sm text-gray-500 pt-4 border-t space-y-1">
+            {request.due_date && (
+              <div className={`${
+                new Date(request.due_date) < new Date() ? 'text-red-600 font-medium' : ''
+              }`}>
+                Due: {new Date(request.due_date).toLocaleDateString()}
+                {new Date(request.due_date) < new Date() && (
+                  <span className="text-red-600 ml-2">(Overdue)</span>
+                )}
               </div>
-            </div>
-          )}
-
-          {/* Documents List */}
-          {documents.length > 0 && (
-            <div className="space-y-2">
-              <Label>Uploaded Documents</Label>
-              <div className="space-y-2">
-                {documents.map((doc) => (
-                  <div key={doc.id} className="flex items-center justify-between p-2 border rounded">
-                    <div className="flex items-center space-x-2">
-                      <FileText className="h-4 w-4" />
-                      <span className="text-sm">{doc.filename}</span>
-                    </div>
-                    <Button variant="outline" size="sm">
-                      <Download className="h-4 w-4 mr-1" />
-                      Download
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+            )}
+            <div>Created: {new Date(request.created_at).toLocaleString()}</div>
+            <div>Last Updated: {new Date(request.updated_at).toLocaleString()}</div>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

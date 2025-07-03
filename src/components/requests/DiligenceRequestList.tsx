@@ -44,8 +44,8 @@ export const DiligenceRequestList = ({ user }: DiligenceRequestListProps) => {
     try {
       setLoading(true);
 
-      // Get requests assigned to the user
-      const { data: requestsData, error: requestsError } = await supabase
+      // Get requests assigned to the user using type assertion
+      const { data: requestsData, error: requestsError } = await (supabase as any)
         .from('diligence_requests')
         .select(`
           id,
@@ -65,31 +65,35 @@ export const DiligenceRequestList = ({ user }: DiligenceRequestListProps) => {
       if (requestsError) throw requestsError;
 
       // Get user responses for these requests
-      const requestIds = requestsData?.map(r => r.id) || [];
-      const { data: responsesData, error: responsesError } = await supabase
-        .from('diligence_responses')
-        .select('request_id, text_response, submitted_at')
-        .in('request_id', requestIds)
-        .eq('user_id', user.id);
+      const requestIds = requestsData?.map((r: any) => r.id) || [];
+      if (requestIds.length > 0) {
+        const { data: responsesData, error: responsesError } = await (supabase as any)
+          .from('diligence_responses')
+          .select('request_id, text_response, submitted_at')
+          .in('request_id', requestIds)
+          .eq('user_id', user.id);
 
-      if (responsesError) throw responsesError;
+        if (responsesError) throw responsesError;
 
-      // Combine requests with responses
-      const requestsWithResponses = requestsData?.map(request => ({
-        ...request,
-        user_response: responsesData?.find(r => r.request_id === request.id)
-      })) || [];
+        // Combine requests with responses
+        const requestsWithResponses = requestsData?.map((request: any) => ({
+          ...request,
+          user_response: responsesData?.find((r: any) => r.request_id === request.id)
+        })) || [];
 
-      setRequests(requestsWithResponses);
+        setRequests(requestsWithResponses);
 
-      // Pre-populate response texts
-      const initialResponseTexts: Record<string, string> = {};
-      requestsWithResponses.forEach(request => {
-        if (request.user_response?.text_response) {
-          initialResponseTexts[request.id] = request.user_response.text_response;
-        }
-      });
-      setResponseTexts(initialResponseTexts);
+        // Pre-populate response texts
+        const initialResponseTexts: Record<string, string> = {};
+        requestsWithResponses.forEach((request: any) => {
+          if (request.user_response?.text_response) {
+            initialResponseTexts[request.id] = request.user_response.text_response;
+          }
+        });
+        setResponseTexts(initialResponseTexts);
+      } else {
+        setRequests([]);
+      }
 
     } catch (error) {
       console.error('Error loading requests:', error);
@@ -163,7 +167,7 @@ export const DiligenceRequestList = ({ user }: DiligenceRequestListProps) => {
     try {
       const responseText = responseTexts[requestId] || '';
       
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('diligence_responses')
         .upsert({
           request_id: requestId,

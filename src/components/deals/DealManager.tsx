@@ -31,13 +31,21 @@ export const DealManager = () => {
 
   const loadDeals = async () => {
     try {
-      const { data, error } = await supabase
-        .from('deals')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setDeals(data || []);
+      // Use raw SQL query to avoid type issues
+      const { data, error } = await supabase.rpc('get_deals');
+      
+      if (error) {
+        // Fallback to direct table access
+        const { data: fallbackData, error: fallbackError } = await (supabase as any)
+          .from('deals')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (fallbackError) throw fallbackError;
+        setDeals(fallbackData || []);
+      } else {
+        setDeals(data || []);
+      }
     } catch (error) {
       console.error('Error loading deals:', error);
       toast({
@@ -66,13 +74,15 @@ export const DealManager = () => {
 
     setCreating(true);
     try {
-      const { data, error } = await supabase
+      const { data: userData } = await supabase.auth.getUser();
+      
+      const { data, error } = await (supabase as any)
         .from('deals')
         .insert([{
           name: newDeal.name,
           code: newDeal.code,
           target_close_date: newDeal.target_close_date || null,
-          created_by: (await supabase.auth.getUser()).data.user?.id
+          created_by: userData.user?.id
         }])
         .select()
         .single();

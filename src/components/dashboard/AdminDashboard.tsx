@@ -1,63 +1,70 @@
-
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Building2, Users, FileText, TrendingUp, Plus } from 'lucide-react';
+import { Users, Building, FileText, TrendingUp } from 'lucide-react';
 import { User } from '@/pages/Index';
-import { DealsOverview } from '@/components/deals/DealsOverview';
 import { UserManagement } from '@/components/users/UserManagement';
+import { DealsOverview } from '@/components/deals/DealsOverview';
+import { DiligenceRequestUpload } from '@/components/upload/DiligenceRequestUpload';
 
 interface AdminDashboardProps {
   user: User;
 }
 
 export const AdminDashboard = ({ user }: AdminDashboardProps) => {
-  const [activeTab, setActiveTab] = useState('overview');
+  const dealInfo = {
+    dealName: 'TechCorp Acquisition',
+    dealCode: 'TECH-2024-001',
+    targetClose: '2024-08-15',
+    overallProgress: 67
+  };
 
-  // Mock data for demonstration
-  const stats = {
-    totalDeals: 3,
-    activeDeals: 2,
-    totalUsers: 12,
-    pendingRequests: 47
+  const taskStats = {
+    total: 24,
+    completed: 16,
+    pending: 6,
+    overdue: 2
   };
 
   return (
     <div className="space-y-6">
-      {/* Welcome Section with Big Brand Tire styling */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border-l-4 border-l-bb-red">
-        <h2 className="text-2xl font-bold text-bb-dark-gray">Welcome back, {user.name}</h2>
-        <p className="text-gray-600">Manage deals, users, and monitor diligence progress across your portfolio.</p>
-      </div>
+      {/* Big Brand Tire Admin Header */}
+      <Card className="bg-gradient-to-r from-bb-red to-red-600 text-white">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-2xl">Admin Dashboard</CardTitle>
+              <CardDescription className="text-red-100">
+                Manage users, deals, and diligence requests
+              </CardDescription>
+            </div>
+            <div className="text-right">
+              <div className="text-3xl font-bold">{dealInfo.overallProgress}%</div>
+              <div className="text-sm text-red-100">Complete</div>
+            </div>
+          </div>
+        </CardHeader>
+      </Card>
 
-      {/* Key Metrics with Big Brand Tire colors */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Admin Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="border-l-4 border-l-bb-red">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-bb-dark-gray">Total Deals</CardTitle>
-            <Building2 className="h-4 w-4 text-bb-red" />
+            <CardTitle className="text-sm font-medium text-bb-dark-gray">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-bb-red" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-bb-dark-gray">{stats.totalDeals}</div>
-            <p className="text-xs text-gray-600">
-              +1 from last month
-            </p>
+            <div className="text-2xl font-bold text-bb-dark-gray">{taskStats.total}</div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-bb-blue">
+        <Card className="border-l-4 border-l-green-600">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-bb-dark-gray">Active Users</CardTitle>
-            <Users className="h-4 w-4 text-bb-blue" />
+            <CardTitle className="text-sm font-medium text-bb-dark-gray">Active Deals</CardTitle>
+            <Building className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-bb-blue">{stats.totalUsers}</div>
-            <p className="text-xs text-gray-600">
-              +3 from last week
-            </p>
+            <div className="text-2xl font-bold text-green-600">{taskStats.completed}</div>
           </CardContent>
         </Card>
 
@@ -67,70 +74,54 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
             <FileText className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600">{stats.pendingRequests}</div>
-            <p className="text-xs text-gray-600">
-              -12 from yesterday
-            </p>
+            <div className="text-2xl font-bold text-amber-600">{taskStats.pending}</div>
           </CardContent>
         </Card>
 
-        <Card className="border-l-4 border-l-green-600">
+        <Card className="border-l-4 border-l-red-600">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium text-bb-dark-gray">Completion Rate</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
+            <CardTitle className="text-sm font-medium text-bb-dark-gray">Overdue Tasks</CardTitle>
+            <TrendingUp className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">73%</div>
-            <p className="text-xs text-gray-600">
-              +5% from last week
-            </p>
+            <div className="text-2xl font-bold text-red-600">{taskStats.overdue}</div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Main Dashboard Tabs with Big Brand Tire styling */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3 bg-white border border-gray-200">
-          <TabsTrigger 
-            value="overview" 
-            className="data-[state=active]:bg-bb-red data-[state=active]:text-white"
-          >
-            Deals Overview
-          </TabsTrigger>
-          <TabsTrigger 
-            value="users"
-            className="data-[state=active]:bg-bb-red data-[state=active]:text-white"
-          >
-            User Management
-          </TabsTrigger>
-          <TabsTrigger 
-            value="analytics"
-            className="data-[state=active]:bg-bb-red data-[state=active]:text-white"
-          >
-            Analytics
-          </TabsTrigger>
+      {/* Management Tabs */}
+      <Tabs defaultValue="users" className="space-y-4">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="users">Users</TabsTrigger>
+          <TabsTrigger value="deals">Deals</TabsTrigger>
+          <TabsTrigger value="requests">Requests</TabsTrigger>
+          <TabsTrigger value="upload">Upload</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-4">
-          <DealsOverview />
-        </TabsContent>
-
-        <TabsContent value="users" className="space-y-4">
+        <TabsContent value="users">
           <UserManagement />
         </TabsContent>
 
-        <TabsContent value="analytics" className="space-y-4">
+        <TabsContent value="deals">
+          <DealsOverview />
+        </TabsContent>
+
+        <TabsContent value="requests">
           <Card>
             <CardHeader>
-              <CardTitle className="text-bb-dark-gray">Analytics Dashboard</CardTitle>
-              <CardDescription>Coming soon - Advanced analytics and reporting</CardDescription>
+              <CardTitle>Diligence Requests Management</CardTitle>
+              <CardDescription>View and manage all diligence requests across deals</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="h-40 flex items-center justify-center text-gray-500">
-                Analytics dashboard will be implemented here
-              </div>
+              <p className="text-gray-600">Request management interface coming soon...</p>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="upload">
+          <DiligenceRequestUpload onUploadComplete={() => {
+            console.log('Upload completed - you may want to refresh other views');
+          }} />
         </TabsContent>
       </Tabs>
     </div>

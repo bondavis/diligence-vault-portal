@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -6,6 +7,7 @@ import { User } from '@/pages/Index';
 import { UserManagement } from '@/components/users/UserManagement';
 import { DealsOverview } from '@/components/deals/DealsOverview';
 import { DiligenceRequestUpload } from '@/components/upload/DiligenceRequestUpload';
+import { RequestManagementTable } from '@/components/admin/RequestManagementTable';
 
 interface AdminDashboardProps {
   user: User;
@@ -90,13 +92,27 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
       </div>
 
       {/* Management Tabs */}
-      <Tabs defaultValue="users" className="space-y-4">
+      <Tabs defaultValue="requests" className="space-y-4">
         <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="requests">Request Management</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="deals">Deals</TabsTrigger>
-          <TabsTrigger value="requests">Requests</TabsTrigger>
           <TabsTrigger value="upload">Upload</TabsTrigger>
         </TabsList>
+
+        <TabsContent value="requests">
+          <Card>
+            <CardHeader>
+              <CardTitle>Diligence Request Management</CardTitle>
+              <CardDescription>
+                Manage, assign, and track all diligence requests across deals
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RequestManagementTable />
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         <TabsContent value="users">
           <UserManagement />
@@ -104,18 +120,6 @@ export const AdminDashboard = ({ user }: AdminDashboardProps) => {
 
         <TabsContent value="deals">
           <DealsOverview />
-        </TabsContent>
-
-        <TabsContent value="requests">
-          <Card>
-            <CardHeader>
-              <CardTitle>Diligence Requests Management</CardTitle>
-              <CardDescription>View and manage all diligence requests across deals</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-gray-600">Request management interface coming soon...</p>
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="upload">

@@ -42,6 +42,100 @@ export type Database = {
         }
         Relationships: []
       }
+      diligence_requests: {
+        Row: {
+          allow_file_upload: boolean
+          allow_text_response: boolean
+          assigned_to: string | null
+          category: Database["public"]["Enums"]["request_category"]
+          created_at: string
+          created_by: string
+          deal_id: string
+          description: string | null
+          due_date: string | null
+          id: string
+          priority: Database["public"]["Enums"]["request_priority"]
+          status: Database["public"]["Enums"]["request_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          allow_file_upload?: boolean
+          allow_text_response?: boolean
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["request_category"]
+          created_at?: string
+          created_by: string
+          deal_id: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["request_priority"]
+          status?: Database["public"]["Enums"]["request_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          allow_file_upload?: boolean
+          allow_text_response?: boolean
+          assigned_to?: string | null
+          category?: Database["public"]["Enums"]["request_category"]
+          created_at?: string
+          created_by?: string
+          deal_id?: string
+          description?: string | null
+          due_date?: string | null
+          id?: string
+          priority?: Database["public"]["Enums"]["request_priority"]
+          status?: Database["public"]["Enums"]["request_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diligence_requests_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      diligence_responses: {
+        Row: {
+          id: string
+          request_id: string
+          submitted_at: string
+          text_response: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          request_id: string
+          submitted_at?: string
+          text_response?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          request_id?: string
+          submitted_at?: string
+          text_response?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diligence_responses_request_id_fkey"
+            columns: ["request_id"]
+            isOneToOne: false
+            referencedRelation: "diligence_requests"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -83,7 +177,17 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      request_category:
+        | "Financial"
+        | "Legal"
+        | "Operations"
+        | "HR"
+        | "IT"
+        | "Environmental"
+        | "Commercial"
+        | "Other"
+      request_priority: "high" | "medium" | "low"
+      request_status: "pending" | "submitted" | "approved" | "rejected"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -198,6 +302,19 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      request_category: [
+        "Financial",
+        "Legal",
+        "Operations",
+        "HR",
+        "IT",
+        "Environmental",
+        "Commercial",
+        "Other",
+      ],
+      request_priority: ["high", "medium", "low"],
+      request_status: ["pending", "submitted", "approved", "rejected"],
+    },
   },
 } as const

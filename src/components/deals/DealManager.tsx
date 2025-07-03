@@ -23,7 +23,6 @@ export const DealManager = () => {
   const [creating, setCreating] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newDeal, setNewDeal] = useState({
-    name: '',
     project_name: '',
     company_name: '',
     target_close_date: ''
@@ -43,7 +42,7 @@ export const DealManager = () => {
       console.error('Error loading deals:', error);
       toast({
         title: "Error",
-        description: "Failed to load deals",
+        description: "Failed to load projects",
         variant: "destructive",
       });
     } finally {
@@ -56,7 +55,7 @@ export const DealManager = () => {
   }, []);
 
   const createDeal = async () => {
-    if (!newDeal.name || !newDeal.project_name || !newDeal.company_name || !newDeal.target_close_date) {
+    if (!newDeal.project_name || !newDeal.company_name || !newDeal.target_close_date) {
       toast({
         title: "Missing Information",
         description: "Please provide project name, company name, and target close date",
@@ -72,7 +71,7 @@ export const DealManager = () => {
       const { data, error } = await (supabase as any)
         .from('deals')
         .insert([{
-          name: newDeal.name,
+          name: newDeal.project_name,
           project_name: newDeal.project_name,
           company_name: newDeal.company_name,
           target_close_date: newDeal.target_close_date,
@@ -85,10 +84,10 @@ export const DealManager = () => {
 
       toast({
         title: "Project Created",
-        description: `${newDeal.name} has been created successfully`,
+        description: `${newDeal.project_name} has been created successfully`,
       });
 
-      setNewDeal({ name: '', project_name: '', company_name: '', target_close_date: '' });
+      setNewDeal({ project_name: '', company_name: '', target_close_date: '' });
       setShowCreateDialog(false);
       loadDeals();
 
@@ -145,8 +144,8 @@ export const DealManager = () => {
                   <Input
                     id="project-name"
                     placeholder="e.g., Project Alpha"
-                    value={newDeal.name}
-                    onChange={(e) => setNewDeal(prev => ({ ...prev, name: e.target.value }))}
+                    value={newDeal.project_name}
+                    onChange={(e) => setNewDeal(prev => ({ ...prev, project_name: e.target.value }))}
                     required
                   />
                 </div>

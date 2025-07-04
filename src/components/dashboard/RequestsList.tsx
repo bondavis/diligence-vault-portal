@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Filter, FileText, AlertCircle, CheckCircle, Clock, Trash2, AlertTriangle } from 'lucide-react';
+import { Filter, Upload, Eye, MessageSquare, Trash2, AlertTriangle, CheckCircle } from 'lucide-react';
 import { RequestFilters } from './RequestFilters';
 import { BulkRequestActions } from './BulkRequestActions';
 import { supabase } from '@/integrations/supabase/client';
@@ -77,43 +77,52 @@ export const RequestsList = ({
   const [isDeletingRequest, setIsDeletingRequest] = useState(false);
   const { toast } = useToast();
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric'
-    });
-  };
-
   const getPriorityBadge = (priority: RequestPriority) => {
     switch (priority) {
       case 'high': 
-        return <Badge className="bg-red-500 text-white hover:bg-red-600">HIGH</Badge>;
+        return <Badge className="bg-red-100 text-red-800 border-red-200 font-medium px-2 py-1">HIGH</Badge>;
       case 'medium': 
-        return <Badge className="bg-orange-500 text-white hover:bg-orange-600">MEDIUM</Badge>;
+        return <Badge className="bg-yellow-100 text-yellow-800 border-yellow-200 font-medium px-2 py-1">MEDIUM</Badge>;
       case 'low': 
-        return <Badge className="bg-green-500 text-white hover:bg-green-600">LOW</Badge>;
+        return <Badge className="bg-green-100 text-green-800 border-green-200 font-medium px-2 py-1">LOW</Badge>;
       default: 
         return <Badge variant="outline">{String(priority).toUpperCase()}</Badge>;
     }
   };
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'Incomplete': return <FileText className="h-4 w-4" />;
-      case 'Review Pending': return <AlertCircle className="h-4 w-4" />;
-      case 'Accepted': return <CheckCircle className="h-4 w-4" />;
-      default: return <Clock className="h-4 w-4" />;
-    }
+  const getCategoryBadge = (category: string) => {
+    const categoryColors: Record<string, string> = {
+      'Financial': 'bg-blue-100 text-blue-700 border-blue-200',
+      'Legal': 'bg-purple-100 text-purple-700 border-purple-200',
+      'Operations': 'bg-orange-100 text-orange-700 border-orange-200',
+      'HR': 'bg-pink-100 text-pink-700 border-pink-200',
+      'IT': 'bg-cyan-100 text-cyan-700 border-cyan-200',
+      'Environmental': 'bg-green-100 text-green-700 border-green-200',
+      'Commercial': 'bg-indigo-100 text-indigo-700 border-indigo-200',
+      'Other': 'bg-gray-100 text-gray-700 border-gray-200'
+    };
+
+    return (
+      <Badge className={`${categoryColors[category] || categoryColors['Other']} font-medium px-2 py-1`}>
+        {category}
+      </Badge>
+    );
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Incomplete': return 'bg-gray-100 text-gray-800';
-      case 'Review Pending': return 'bg-blue-100 text-blue-800';
-      case 'Accepted': return 'bg-green-100 text-green-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const getUploadStatusBadge = (request: DiligenceRequest) => {
+    const hasDocuments = (request.document_count || 0) > 0;
+    const hasResponse = request.has_response;
+    
+    if (request.computed_status === 'Accepted') {
+      return (
+        <div className="flex items-center space-x-1 text-green-600">
+          <CheckCircle className="h-4 w-4" />
+          <span className="text-sm font-medium">Uploaded</span>
+        </div>
+      );
     }
+    
+    return null;
   };
 
   const handleSelectAll = (checked: boolean) => {
@@ -221,7 +230,7 @@ export const RequestsList = ({
             />
             
             {filteredRequests.length > 0 && (
-              <div className="flex items-center space-x-2 p-4 border-b bg-gray-50">
+              <div className="flex items-center space-x-2 p-4 border-b bg-gray-50 mb-4">
                 <Checkbox
                   checked={selectedRequests.length === filteredRequests.length && filteredRequests.length > 0}
                   onCheckedChange={handleSelectAll}
@@ -246,10 +255,10 @@ export const RequestsList = ({
             {filteredRequests.map((request) => (
               <div 
                 key={request.id} 
-                className="border rounded-lg p-4 hover:bg-gray-50 transition-colors"
+                className="border rounded-lg p-6 hover:bg-gray-50 transition-colors bg-white"
               >
                 <div className="flex items-start justify-between">
-                  <div className="flex items-start space-x-3 flex-1">
+                  <div className="flex items-start space-x-4 flex-1">
                     {isAdmin && (
                       <Checkbox
                         checked={selectedRequests.includes(request.id)}
@@ -261,43 +270,63 @@ export const RequestsList = ({
                       className="flex-1 cursor-pointer"
                       onClick={() => onRequestClick(request)}
                     >
-                      <h4 className="font-medium text-lg mb-1">{request.title}</h4>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold text-lg text-gray-900">{request.title}</h3>
+                        <div className="flex items-center space-x-3">
+                          {getPriorityBadge(request.priority)}
+                          {getUploadStatusBadge(request)}
+                          <Eye className="h-4 w-4 text-gray-400" />
+                        </div>
+                      </div>
+                      
                       {request.description && (
-                        <p className="text-sm text-gray-600 mb-2">{request.description}</p>
+                        <p className="text-gray-600 mb-4 leading-relaxed">{request.description}</p>
                       )}
-                      <div className="flex items-center space-x-4 text-xs text-gray-500 mb-2">
-                        <span>Category: {request.category}</span>
-                        <span>Created: {formatDate(request.created_at)}</span>
-                        {request.due_date && (
-                          <span>Due: {formatDate(request.due_date)}</span>
-                        )}
+                      
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          {getCategoryBadge(request.category)}
+                        </div>
+                        
+                        <div className="flex items-center space-x-4">
+                          {request.document_count && request.document_count > 0 && (
+                            <div className="flex items-center space-x-1 text-gray-500">
+                              <MessageSquare className="h-4 w-4" />
+                              <span className="text-sm">{request.document_count} {request.document_count === 1 ? 'comment' : 'comments'}</span>
+                            </div>
+                          )}
+                          
+                          {request.computed_status !== 'Accepted' && (
+                            <Button 
+                              size="sm"
+                              className="bg-blue-600 hover:bg-blue-700 text-white"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onRequestClick(request);
+                              }}
+                            >
+                              <Upload className="h-4 w-4 mr-1" />
+                              Upload
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <div className="flex flex-col items-end space-y-2">
-                      {getPriorityBadge(request.priority)}
-                      <Badge className={getStatusColor(request.computed_status || 'pending')}>
-                        <div className="flex items-center space-x-1">
-                          {getStatusIcon(request.computed_status || 'pending')}
-                          <span>{request.computed_status}</span>
-                        </div>
-                      </Badge>
-                    </div>
-                    {isAdmin && (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setRequestToDelete(request.id);
-                        }}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </div>
+                  
+                  {isAdmin && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setRequestToDelete(request.id);
+                      }}
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

@@ -1,4 +1,3 @@
-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -92,6 +91,19 @@ export const RequestCard = ({
                   </div>
                 )}
                 <Eye className="h-4 w-4 text-gray-400" />
+                {isAdmin && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onDeleteRequest(request.id);
+                    }}
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 p-1 h-auto"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
               </div>
             </div>
             
@@ -122,20 +134,6 @@ export const RequestCard = ({
             </div>
           </div>
         </div>
-        
-        {isAdmin && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              onDeleteRequest(request.id);
-            }}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2 mt-1"
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
       </div>
     </div>
   );

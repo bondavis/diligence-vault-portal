@@ -2,7 +2,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, Eye, MessageSquare, Trash2, CheckCircle } from 'lucide-react';
+import { Upload, Eye, Trash2, CheckCircle } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
 
 type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'] & {
@@ -104,12 +104,6 @@ export const RequestCard = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 {getCategoryBadge(request.category)}
-                {request.document_count && request.document_count > 0 && (
-                  <div className="flex items-center space-x-1 text-gray-500">
-                    <MessageSquare className="h-4 w-4" />
-                    <span className="text-sm">{request.document_count}</span>
-                  </div>
-                )}
               </div>
               
               {!isUploaded && (
@@ -137,7 +131,7 @@ export const RequestCard = ({
               e.stopPropagation();
               onDeleteRequest(request.id);
             }}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2 flex-shrink-0"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2 mt-1"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

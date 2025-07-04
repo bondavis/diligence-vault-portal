@@ -8,6 +8,7 @@ import { DealActions } from './DealActions';
 import { RequestsList } from './RequestsList';
 import { templateService } from '@/services/templateService';
 import { Database } from '@/integrations/supabase/types';
+import { RecentActivity } from './RecentActivity';
 
 type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'] & {
   document_count?: number;
@@ -227,33 +228,41 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
   };
 
   return (
-    <div className="space-y-6">
-      <DealHeader 
-        deal={deal} 
-        overallCompletionPercentage={overallCompletionPercentage} 
-        onBack={onBack} 
-      />
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* Main Content */}
+      <div className="lg:col-span-2 space-y-6">
+        <DealHeader 
+          deal={deal} 
+          overallCompletionPercentage={overallCompletionPercentage} 
+          onBack={onBack} 
+        />
 
-      <DealProgressCard categoryProgress={categoryProgress} />
+        <DealProgressCard categoryProgress={categoryProgress} />
 
-      <DealActions 
-        onLoadTemplate={handleLoadTemplate} 
-        loadingTemplate={loadingTemplate} 
-      />
+        <DealActions 
+          onLoadTemplate={handleLoadTemplate} 
+          loadingTemplate={loadingTemplate} 
+        />
 
-      <RequestsList
-        requests={requests}
-        filteredRequests={filteredRequests}
-        loading={loading}
-        showFilters={showFilters}
-        activeFilters={activeFilters}
-        onToggleFilters={() => setShowFilters(!showFilters)}
-        onFilterChange={setActiveFilters}
-        onRequestClick={setSelectedRequest}
-        onRequestsUpdated={handleRequestsUpdated}
-        getRequestCounts={getRequestCounts}
-        isAdmin={true}
-      />
+        <RequestsList
+          requests={requests}
+          filteredRequests={filteredRequests}
+          loading={loading}
+          showFilters={showFilters}
+          activeFilters={activeFilters}
+          onToggleFilters={() => setShowFilters(!showFilters)}
+          onFilterChange={setActiveFilters}
+          onRequestClick={setSelectedRequest}
+          onRequestsUpdated={handleRequestsUpdated}
+          getRequestCounts={getRequestCounts}
+          isAdmin={true}
+        />
+      </div>
+
+      {/* Sidebar */}
+      <div className="lg:col-span-1">
+        <RecentActivity dealId={deal.id} />
+      </div>
 
       <RequestDetailModal
         request={selectedRequest}

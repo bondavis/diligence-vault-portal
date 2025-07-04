@@ -40,8 +40,7 @@ export const RecentActivity = ({ dealId }: RecentActivityProps) => {
           filename,
           uploaded_at,
           uploaded_by,
-          diligence_requests!inner(deal_id, title),
-          profiles!request_documents_uploaded_by_fkey(name)
+          diligence_requests!inner(deal_id, title)
         `)
         .eq('diligence_requests.deal_id', dealId)
         .order('uploaded_at', { ascending: false })
@@ -49,16 +48,27 @@ export const RecentActivity = ({ dealId }: RecentActivityProps) => {
 
       if (docError) throw docError;
 
-      documents?.forEach(doc => {
-        activities.push({
-          id: `doc-${doc.id}`,
-          type: 'document_upload',
-          user_name: doc.profiles?.name || 'Unknown User',
-          action: 'document uploaded',
-          target: doc.filename,
-          timestamp: doc.uploaded_at
+      // Get user names for document uploads
+      if (documents && documents.length > 0) {
+        const uploaderIds = [...new Set(documents.map(doc => doc.uploaded_by))];
+        const { data: uploaders } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', uploaderIds);
+
+        const uploaderMap = new Map(uploaders?.map(u => [u.id, u.name]) || []);
+
+        documents.forEach(doc => {
+          activities.push({
+            id: `doc-${doc.id}`,
+            type: 'document_upload',
+            user_name: uploaderMap.get(doc.uploaded_by) || 'Unknown User',
+            action: 'document uploaded',
+            target: doc.filename,
+            timestamp: doc.uploaded_at
+          });
         });
-      });
+      }
 
       // Get recent request completions (approved status)
       const { data: completedRequests, error: reqError } = await supabase
@@ -68,7 +78,7 @@ export const RecentActivity = ({ dealId }: RecentActivityProps) => {
           title,
           updated_at,
           status,
-          profiles!diligence_requests_assigned_to_fkey(name)
+          assigned_to
         `)
         .eq('deal_id', dealId)
         .eq('status', 'approved')
@@ -77,16 +87,27 @@ export const RecentActivity = ({ dealId }: RecentActivityProps) => {
 
       if (reqError) throw reqError;
 
-      completedRequests?.forEach(req => {
-        activities.push({
-          id: `req-completed-${req.id}`,
-          type: 'request_completed',
-          user_name: req.profiles?.name || 'Unknown User',
-          action: 'request completed',
-          target: req.title,
-          timestamp: req.updated_at
+      // Get user names for completed requests
+      if (completedRequests && completedRequests.length > 0) {
+        const assigneeIds = [...new Set(completedRequests.map(req => req.assigned_to).filter(Boolean))];
+        const { data: assignees } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', assigneeIds);
+
+        const assigneeMap = new Map(assignees?.map(a => [a.id, a.name]) || []);
+
+        completedRequests.forEach(req => {
+          activities.push({
+            id: `req-completed-${req.id}`,
+            type: 'request_completed',
+            user_name: assigneeMap.get(req.assigned_to || '') || 'Unknown User',
+            action: 'request completed',
+            target: req.title,
+            timestamp: req.updated_at
+          });
         });
-      });
+      }
 
       // Get recently created requests
       const { data: newRequests, error: newReqError } = await supabase
@@ -95,7 +116,7 @@ export const RecentActivity = ({ dealId }: RecentActivityProps) => {
           id,
           title,
           created_at,
-          profiles!diligence_requests_created_by_fkey(name)
+          created_by
         `)
         .eq('deal_id', dealId)
         .order('created_at', { ascending: false })
@@ -103,16 +124,27 @@ export const RecentActivity = ({ dealId }: RecentActivityProps) => {
 
       if (newReqError) throw newReqError;
 
-      newRequests?.forEach(req => {
-        activities.push({
-          id: `req-created-${req.id}`,
-          type: 'request_created',
-          user_name: req.profiles?.name || 'Unknown User',
-          action: 'new request created',
-          target: req.title,
-          timestamp: req.created_at
+      // Get user names for new requests
+      if (newRequests && newRequests.length > 0) {
+        const creatorIds = [...new Set(newRequests.map(req => req.created_by))];
+        const { data: creators } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', creatorIds);
+
+        const creatorMap = new Map(creators?.map(c => [c.id, c.name]) || []);
+
+        newRequests.forEach(req => {
+          activities.push({
+            id: `req-created-${req.id}`,
+            type: 'request_created',
+            user_name: creatorMap.get(req.created_by) || 'Unknown User',
+            action: 'new request created',
+            target: req.title,
+            timestamp: req.created_at
+          });
         });
-      });
+      }
 
       // Get recent responses
       const { data: responses, error: respError } = await supabase
@@ -120,7 +152,7 @@ export const RecentActivity = ({ dealId }: RecentActivityProps) => {
         .select(`
           id,
           submitted_at,
-          profiles!diligence_responses_user_id_fkey(name),
+          user_id,
           diligence_requests!inner(deal_id, title)
         `)
         .eq('diligence_requests.deal_id', dealId)
@@ -129,16 +161,27 @@ export const RecentActivity = ({ dealId }: RecentActivityProps) => {
 
       if (respError) throw respError;
 
-      responses?.forEach(resp => {
-        activities.push({
-          id: `resp-${resp.id}`,
-          type: 'response_submitted',
-          user_name: resp.profiles?.name || 'Unknown User',
-          action: 'response submitted',
-          target: resp.diligence_requests?.title || 'Request',
-          timestamp: resp.submitted_at
+      // Get user names for responses
+      if (responses && responses.length > 0) {
+        const responderIds = [...new Set(responses.map(resp => resp.user_id))];
+        const { data: responders } = await supabase
+          .from('profiles')
+          .select('id, name')
+          .in('id', responderIds);
+
+        const responderMap = new Map(responders?.map(r => [r.id, r.name]) || []);
+
+        responses.forEach(resp => {
+          activities.push({
+            id: `resp-${resp.id}`,
+            type: 'response_submitted',
+            user_name: responderMap.get(resp.user_id) || 'Unknown User',
+            action: 'response submitted',
+            target: resp.diligence_requests?.title || 'Request',
+            timestamp: resp.submitted_at
+          });
         });
-      });
+      }
 
       // Sort all activities by timestamp and take the most recent
       const sortedActivities = activities

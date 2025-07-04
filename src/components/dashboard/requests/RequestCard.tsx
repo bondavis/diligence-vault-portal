@@ -54,19 +54,6 @@ const getCategoryBadge = (category: string) => {
   );
 };
 
-const getUploadStatusBadge = (request: DiligenceRequest) => {
-  if (request.computed_status === 'Accepted') {
-    return (
-      <div className="flex items-center space-x-1 text-green-600">
-        <CheckCircle className="h-4 w-4" />
-        <span className="text-sm font-medium">Uploaded</span>
-      </div>
-    );
-  }
-  
-  return null;
-};
-
 export const RequestCard = ({ 
   request, 
   isSelected, 
@@ -75,8 +62,13 @@ export const RequestCard = ({
   onRequestClick, 
   onDeleteRequest 
 }: RequestCardProps) => {
+  const isUploaded = request.computed_status === 'Accepted';
+
   return (
-    <div className="border rounded-lg p-6 hover:bg-gray-50 transition-colors bg-white">
+    <div 
+      className="border rounded-lg p-6 hover:bg-gray-50 transition-colors bg-white cursor-pointer"
+      onClick={() => onRequestClick(request)}
+    >
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-4 flex-1">
           {isAdmin && (
@@ -84,52 +76,55 @@ export const RequestCard = ({
               checked={isSelected}
               onCheckedChange={(checked) => onSelectRequest(request.id, checked as boolean)}
               className="mt-1"
+              onClick={(e) => e.stopPropagation()}
             />
           )}
-          <div 
-            className="flex-1 cursor-pointer"
-            onClick={() => onRequestClick(request)}
-          >
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-semibold text-lg text-gray-900">{request.title}</h3>
-              <div className="flex items-center space-x-3">
+          
+          <div className="flex-1">
+            {/* Header with title and badges */}
+            <div className="flex items-start justify-between mb-3">
+              <h3 className="font-semibold text-lg text-gray-900 flex-1 mr-4">{request.title}</h3>
+              <div className="flex items-center space-x-2 flex-shrink-0">
                 {getPriorityBadge(request.priority)}
-                {getUploadStatusBadge(request)}
+                {isUploaded && (
+                  <div className="flex items-center space-x-1 text-green-600">
+                    <CheckCircle className="h-4 w-4" />
+                  </div>
+                )}
                 <Eye className="h-4 w-4 text-gray-400" />
               </div>
             </div>
             
+            {/* Description */}
             {request.description && (
               <p className="text-gray-600 mb-4 leading-relaxed">{request.description}</p>
             )}
             
+            {/* Bottom section with category and upload button */}
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 {getCategoryBadge(request.category)}
-              </div>
-              
-              <div className="flex items-center space-x-4">
                 {request.document_count && request.document_count > 0 && (
                   <div className="flex items-center space-x-1 text-gray-500">
                     <MessageSquare className="h-4 w-4" />
-                    <span className="text-sm">{request.document_count} {request.document_count === 1 ? 'comment' : 'comments'}</span>
+                    <span className="text-sm">{request.document_count}</span>
                   </div>
                 )}
-                
-                {request.computed_status !== 'Accepted' && (
-                  <Button 
-                    size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onRequestClick(request);
-                    }}
-                  >
-                    <Upload className="h-4 w-4 mr-1" />
-                    Upload
-                  </Button>
-                )}
               </div>
+              
+              {!isUploaded && (
+                <Button 
+                  size="sm"
+                  className="bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRequestClick(request);
+                  }}
+                >
+                  <Upload className="h-4 w-4 mr-1" />
+                  Upload
+                </Button>
+              )}
             </div>
           </div>
         </div>
@@ -142,7 +137,7 @@ export const RequestCard = ({
               e.stopPropagation();
               onDeleteRequest(request.id);
             }}
-            className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2"
+            className="text-red-600 hover:text-red-700 hover:bg-red-50 ml-2 flex-shrink-0"
           >
             <Trash2 className="h-4 w-4" />
           </Button>

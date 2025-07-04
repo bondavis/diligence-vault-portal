@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { RequestDetailModal } from './RequestDetailModal';
 import { DealHeader } from './DealHeader';
 import { DealProgressCard } from './DealProgressCard';
@@ -52,7 +52,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
   const { toast } = useToast();
 
   // Apply filters whenever requests or activeFilters change
-  useState(() => {
+  useEffect(() => {
     let filtered = [...requests];
 
     if (activeFilters.priority) {
@@ -68,7 +68,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
     }
 
     setFilteredRequests(filtered);
-  });
+  }, [requests, activeFilters]);
 
   const handleLoadTemplate = async () => {
     try {

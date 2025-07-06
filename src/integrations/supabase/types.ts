@@ -175,6 +175,139 @@ export type Database = {
         }
         Relationships: []
       }
+      questionnaire_questions: {
+        Row: {
+          category: Database["public"]["Enums"]["questionnaire_category"]
+          created_at: string
+          created_by: string
+          help_text: string | null
+          id: string
+          is_active: boolean
+          is_required: boolean
+          options: Json | null
+          question_text: string
+          question_type: Database["public"]["Enums"]["question_type"]
+          responsible_party:
+            | Database["public"]["Enums"]["responsible_party"]
+            | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category?: Database["public"]["Enums"]["questionnaire_category"]
+          created_at?: string
+          created_by: string
+          help_text?: string | null
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          options?: Json | null
+          question_text: string
+          question_type?: Database["public"]["Enums"]["question_type"]
+          responsible_party?:
+            | Database["public"]["Enums"]["responsible_party"]
+            | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["questionnaire_category"]
+          created_at?: string
+          created_by?: string
+          help_text?: string | null
+          id?: string
+          is_active?: boolean
+          is_required?: boolean
+          options?: Json | null
+          question_text?: string
+          question_type?: Database["public"]["Enums"]["question_type"]
+          responsible_party?:
+            | Database["public"]["Enums"]["responsible_party"]
+            | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      questionnaire_responses: {
+        Row: {
+          deal_id: string
+          id: string
+          question_id: string
+          response_value: string | null
+          submitted_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          deal_id: string
+          id?: string
+          question_id: string
+          response_value?: string | null
+          submitted_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          deal_id?: string
+          id?: string
+          question_id?: string
+          response_value?: string | null
+          submitted_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_responses_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaire_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      questionnaire_sessions: {
+        Row: {
+          completed_at: string | null
+          current_question_id: string | null
+          deal_id: string
+          id: string
+          is_completed: boolean
+          last_updated: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          current_question_id?: string | null
+          deal_id: string
+          id?: string
+          is_completed?: boolean
+          last_updated?: string
+          started_at?: string
+          user_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          current_question_id?: string | null
+          deal_id?: string
+          id?: string
+          is_completed?: boolean
+          last_updated?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "questionnaire_sessions_current_question_id_fkey"
+            columns: ["current_question_id"]
+            isOneToOne: false
+            referencedRelation: "questionnaire_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       request_documents: {
         Row: {
           box_file_id: string | null
@@ -278,6 +411,27 @@ export type Database = {
       }
     }
     Enums: {
+      question_type:
+        | "text"
+        | "textarea"
+        | "number"
+        | "select"
+        | "radio"
+        | "checkbox"
+        | "yes_no"
+      questionnaire_category:
+        | "Business Snapshot"
+        | "Key Metrics"
+        | "Service Mix"
+        | "Sales"
+        | "HR"
+        | "Operational"
+        | "Customer Experience"
+        | "Marketing"
+        | "Technology & Systems"
+        | "Facilities & Equipment"
+        | "Compliance/Insurance/Safety"
+        | "Deal Specific"
       request_category:
         | "Financial"
         | "Legal"
@@ -289,6 +443,7 @@ export type Database = {
         | "Other"
       request_priority: "high" | "medium" | "low"
       request_status: "pending" | "submitted" | "approved" | "rejected"
+      responsible_party: "M&A" | "Ops"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -404,6 +559,29 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      question_type: [
+        "text",
+        "textarea",
+        "number",
+        "select",
+        "radio",
+        "checkbox",
+        "yes_no",
+      ],
+      questionnaire_category: [
+        "Business Snapshot",
+        "Key Metrics",
+        "Service Mix",
+        "Sales",
+        "HR",
+        "Operational",
+        "Customer Experience",
+        "Marketing",
+        "Technology & Systems",
+        "Facilities & Equipment",
+        "Compliance/Insurance/Safety",
+        "Deal Specific",
+      ],
       request_category: [
         "Financial",
         "Legal",
@@ -416,6 +594,7 @@ export const Constants = {
       ],
       request_priority: ["high", "medium", "low"],
       request_status: ["pending", "submitted", "approved", "rejected"],
+      responsible_party: ["M&A", "Ops"],
     },
   },
 } as const

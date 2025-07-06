@@ -5,6 +5,8 @@ import { DealHeader } from './DealHeader';
 import { DealProgressCard } from './DealProgressCard';
 import { DealActions } from './DealActions';
 import { RequestsList } from './RequestsList';
+import { QuestionnaireCard } from './QuestionnaireCard';
+import { SellerQuestionnaire } from '@/components/questionnaire/SellerQuestionnaire';
 import { templateService } from '@/services/templateService';
 import { Database } from '@/integrations/supabase/types';
 import { RecentActivity } from './RecentActivity';
@@ -44,12 +46,80 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
   const [selectedRequest, setSelectedRequest] = useState<DiligenceRequest | null>(null);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
+  const [questionnaireStatus, setQuestionnaireStatus] = useState<{
+    exists: boolean;
+    completed: boolean;
+    progress: number;
+  }>({ exists: false, completed: false, progress: 0 });
   const [activeFilters, setActiveFilters] = useState<{
     priority?: RequestPriority;
     category?: RequestCategory;
     status?: string;
   }>({});
   const { toast } = useToast();
+
+  // Load questionnaire status
+  useEffect(() => {
+    loadQuestionnaireStatus();
+  }, [deal.id]);
+
+  const loadQuestionnaireStatus = async () => {
+    try {
+      const user = await supabase.auth.getUser();
+      if (!user.data.user) return;
+
+      // Check if there's a session for this deal
+      const { data: session, error: sessionError } = await supabase
+        .from('questionnaire_sessions')
+        .select('*')
+        .eq('deal_id', deal.id)
+        .eq('user_id', user.data.user.id)
+        .single();
+
+      if (sessionError && sessionError.code !== 'PGRST116') {
+        console.error('Error loading questionnaire status:', sessionError);
+        return;
+      }
+
+      if (session) {
+        // Get total question count
+        const { data: questions, error: questionsError } = await supabase
+          .from('questionnaire_questions')
+          .select('id')
+          .eq('is_active', true);
+
+        if (questionsError) throw questionsError;
+
+        // Get answered questions count
+        const { data: responses, error: responsesError } = await supabase
+          .from('questionnaire_responses')
+          .select('id')
+          .eq('deal_id', deal.id)
+          .eq('user_id', user.data.user.id);
+
+        if (responsesError) throw responsesError;
+
+        const totalQuestions = questions?.length || 0;
+        const answeredQuestions = responses?.length || 0;
+        const progress = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
+
+        setQuestionnaireStatus({
+          exists: true,
+          completed: session.is_completed,
+          progress: progress,
+        });
+      } else {
+        setQuestionnaireStatus({
+          exists: false,
+          completed: false,
+          progress: 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading questionnaire status:', error);
+    }
+  };
 
   // Apply filters whenever requests or activeFilters change
   useEffect(() => {
@@ -107,6 +177,27 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
     }
   };
 
+  const handleQuestionnaireComplete = () => {
+    setShowQuestionnaire(false);
+    loadQuestionnaireStatus();
+    toast({
+      title: "Questionnaire Complete!",
+      description: "Your Post-LOI questionnaire has been submitted successfully",
+    });
+  };
+
+  // If showing questionnaire, render it full screen
+  if (showQuestionnaire) {
+    return (
+      <SellerQuestionnaire
+        dealId={deal.id}
+        dealName={deal.name}
+        onComplete={handleQuestionnaireComplete}
+        onBack={() => setShowQuestionnaire(false)}
+      />
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Main Content */}
@@ -118,6 +209,12 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
         />
 
         <DealProgressCard categoryProgress={categoryProgress} />
+
+        <QuestionnaireCard 
+          status={questionnaireStatus}
+          onStart={() => setShowQuestionnaire(true)}
+          loading={loading}
+        />
 
         <DealActions 
           onLoadTemplate={handleLoadTemplate} 

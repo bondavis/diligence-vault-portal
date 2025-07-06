@@ -6,6 +6,8 @@ import { Progress } from '@/components/ui/progress';
 import { Building, CheckCircle, Clock, AlertTriangle, FileText } from 'lucide-react';
 import { User } from '@/pages/Index';
 import { DiligenceRequestList } from '@/components/requests/DiligenceRequestList';
+import { QuestionnaireCard } from './QuestionnaireCard';
+import { SellerQuestionnaire } from '@/components/questionnaire/SellerQuestionnaire';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -31,7 +33,79 @@ export const SellerDashboard = ({ user }: SellerDashboardProps) => {
     overdue: 0
   });
   const [loading, setLoading] = useState(true);
+  const [showQuestionnaire, setShowQuestionnaire] = useState(false);
+  const [questionnaireStatus, setQuestionnaireStatus] = useState<{
+    exists: boolean;
+    completed: boolean;
+    progress: number;
+  }>({ exists: false, completed: false, progress: 0 });
   const { toast } = useToast();
+
+  useEffect(() => {
+    loadDealInfo();
+    if (user.dealId) {
+      loadQuestionnaireStatus();
+    }
+  }, [user.dealId]);
+
+  const loadQuestionnaireStatus = async () => {
+    if (!user.dealId) return;
+    
+    try {
+      const userAuth = await supabase.auth.getUser();
+      if (!userAuth.data.user) return;
+
+      // Check if there's a session for this deal
+      const { data: session, error: sessionError } = await supabase
+        .from('questionnaire_sessions')
+        .select('*')
+        .eq('deal_id', user.dealId)
+        .eq('user_id', userAuth.data.user.id)
+        .single();
+
+      if (sessionError && sessionError.code !== 'PGRST116') {
+        console.error('Error loading questionnaire status:', sessionError);
+        return;
+      }
+
+      if (session) {
+        // Get total question count
+        const { data: questions, error: questionsError } = await supabase
+          .from('questionnaire_questions')
+          .select('id')
+          .eq('is_active', true);
+
+        if (questionsError) throw questionsError;
+
+        // Get answered questions count
+        const { data: responses, error: responsesError } = await supabase
+          .from('questionnaire_responses')
+          .select('id')
+          .eq('deal_id', user.dealId)
+          .eq('user_id', userAuth.data.user.id);
+
+        if (responsesError) throw responsesError;
+
+        const totalQuestions = questions?.length || 0;
+        const answeredQuestions = responses?.length || 0;
+        const progress = totalQuestions > 0 ? Math.round((answeredQuestions / totalQuestions) * 100) : 0;
+
+        setQuestionnaireStatus({
+          exists: true,
+          completed: session.is_completed,
+          progress: progress,
+        });
+      } else {
+        setQuestionnaireStatus({
+          exists: false,
+          completed: false,
+          progress: 0,
+        });
+      }
+    } catch (error) {
+      console.error('Error loading questionnaire status:', error);
+    }
+  };
 
   useEffect(() => {
     loadDealInfo();
@@ -94,6 +168,27 @@ export const SellerDashboard = ({ user }: SellerDashboardProps) => {
       setLoading(false);
     }
   };
+
+  const handleQuestionnaireComplete = () => {
+    setShowQuestionnaire(false);
+    loadQuestionnaireStatus();
+    toast({
+      title: "Questionnaire Complete!",
+      description: "Your Post-LOI questionnaire has been submitted successfully",
+    });
+  };
+
+  // If showing questionnaire, render it full screen
+  if (showQuestionnaire && user.dealId) {
+    return (
+      <SellerQuestionnaire
+        dealId={user.dealId}
+        dealName={dealInfo?.name}
+        onComplete={handleQuestionnaireComplete}
+        onBack={() => setShowQuestionnaire(false)}
+      />
+    );
+  }
 
   if (loading) {
     return (
@@ -187,6 +282,13 @@ export const SellerDashboard = ({ user }: SellerDashboardProps) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Post-LOI Questionnaire */}
+      <QuestionnaireCard 
+        status={questionnaireStatus}
+        onStart={() => setShowQuestionnaire(true)}
+        loading={loading}
+      />
 
       {/* Diligence Requests */}
       <DiligenceRequestList user={user} />

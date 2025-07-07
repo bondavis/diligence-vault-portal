@@ -118,13 +118,6 @@ export const Login = () => {
               </button>
             </div>
 
-            <div className="mt-6 p-4 bg-slate-50 rounded-lg">
-              <p className="text-sm font-medium text-slate-700 mb-2">Test Account:</p>
-              <div className="space-y-1 text-xs text-slate-600">
-                <p><strong>Email:</strong> matthew.davis@bigbrandtire.com</p>
-                <p><strong>Password:</strong> password123</p>
-              </div>
-            </div>
           </CardContent>
         </Card>
       </div>

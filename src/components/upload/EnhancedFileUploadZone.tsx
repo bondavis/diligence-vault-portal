@@ -101,6 +101,16 @@ export const EnhancedFileUploadZone = ({ requestId, onUploadComplete }: Enhanced
     if (!allowedTypes.includes(file.type)) {
       return `File type not supported. Please use PDF, DOC, DOCX, XLS, XLSX, or image files.`;
     }
+    // Additional security: check file extension matches MIME type
+    const extension = file.name.split('.').pop()?.toLowerCase();
+    const validExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg'];
+    if (!extension || !validExtensions.includes(extension)) {
+      return `Invalid file extension. Only ${validExtensions.join(', ')} files are allowed.`;
+    }
+    // Check for suspicious file names
+    if (file.name.includes('..') || file.name.includes('/') || file.name.includes('\\')) {
+      return `Invalid filename. Path traversal characters not allowed.`;
+    }
     return null;
   };
 

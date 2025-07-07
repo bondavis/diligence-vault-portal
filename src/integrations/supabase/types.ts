@@ -414,6 +414,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      log_security_event: {
+        Args: { event_type: string; user_id: string; details?: Json }
+        Returns: undefined
+      }
     }
     Enums: {
       question_type:

@@ -6,6 +6,9 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Database } from '@/integrations/supabase/types';
+import { validateQuestionnaireResponse } from '@/utils/inputValidation';
+import { useState } from 'react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 type QuestionnaireQuestion = Database['public']['Tables']['questionnaire_questions']['Row'];
 
@@ -17,6 +20,18 @@ interface QuestionRendererProps {
 
 export const QuestionRenderer = ({ question, value, onChange }: QuestionRendererProps) => {
   const options = question.options ? (Array.isArray(question.options) ? question.options.map(String) : []) : [];
+  const [validationError, setValidationError] = useState<string>('');
+
+  const handleChange = (newValue: any) => {
+    const validation = validateQuestionnaireResponse(String(newValue), question.question_type);
+    
+    if (validation.isValid) {
+      setValidationError('');
+      onChange(validation.sanitized);
+    } else {
+      setValidationError(validation.error || 'Invalid input');
+    }
+  };
 
   const renderInput = () => {
     switch (question.question_type) {
@@ -25,7 +40,7 @@ export const QuestionRenderer = ({ question, value, onChange }: QuestionRenderer
           <Input
             type="text"
             value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             placeholder="Enter your answer..."
             className="w-full"
           />
@@ -35,7 +50,7 @@ export const QuestionRenderer = ({ question, value, onChange }: QuestionRenderer
         return (
           <Textarea
             value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             placeholder="Enter your detailed answer..."
             className="w-full min-h-[100px]"
           />
@@ -46,7 +61,7 @@ export const QuestionRenderer = ({ question, value, onChange }: QuestionRenderer
           <Input
             type="number"
             value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => handleChange(e.target.value)}
             placeholder="Enter a number..."
             className="w-full"
           />
@@ -149,6 +164,11 @@ export const QuestionRenderer = ({ question, value, onChange }: QuestionRenderer
       </div>
       <div>
         {renderInput()}
+        {validationError && (
+          <Alert variant="destructive" className="mt-2">
+            <AlertDescription>{validationError}</AlertDescription>
+          </Alert>
+        )}
       </div>
     </div>
   );

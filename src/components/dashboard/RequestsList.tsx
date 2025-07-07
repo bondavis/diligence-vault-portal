@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import { Card } from '@/components/ui/card';
 import { RequestsHeader } from './requests/RequestsHeader';
-import { RequestsListContent } from './requests/RequestsListContent';
+import { CollapsibleRequestsSection } from './requests/CollapsibleRequestsSection';
 import { DeleteRequestDialog } from './requests/DeleteRequestDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
@@ -128,21 +128,14 @@ export const RequestsList = ({
   };
 
   return (
-    <Card>
-      <RequestsHeader
-        requests={requests}
-        filteredRequests={filteredRequests}
-        showFilters={showFilters}
-        activeFilters={activeFilters}
-        onToggleFilters={onToggleFilters}
-      />
-      
-      <RequestsListContent
+    <>
+      <CollapsibleRequestsSection
         requests={requests}
         filteredRequests={filteredRequests}
         loading={loading}
         showFilters={showFilters}
         activeFilters={activeFilters}
+        onToggleFilters={onToggleFilters}
         onFilterChange={onFilterChange}
         onRequestClick={onRequestClick}
         onRequestsUpdated={onRequestsUpdated}
@@ -160,6 +153,6 @@ export const RequestsList = ({
         onClose={() => setRequestToDelete(null)}
         onConfirm={() => requestToDelete && handleDeleteRequest(requestToDelete)}
       />
-    </Card>
+    </>
   );
 };

@@ -5,6 +5,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { RequestFilters } from '../RequestFilters';
 import { BulkRequestActions } from '../BulkRequestActions';
 import { RequestCard } from './RequestCard';
+import { EnhancedRequestCard } from './EnhancedRequestCard';
 import { Database } from '@/integrations/supabase/types';
 
 type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'] & {
@@ -46,6 +47,7 @@ interface RequestsListContentProps {
   onSelectAll: (checked: boolean) => void;
   onSelectRequest: (requestId: string, checked: boolean) => void;
   onDeleteRequest: (requestId: string) => void;
+  viewMode?: 'grid' | 'list';
 }
 
 export const RequestsListContent = ({
@@ -62,7 +64,8 @@ export const RequestsListContent = ({
   selectedRequests,
   onSelectAll,
   onSelectRequest,
-  onDeleteRequest
+  onDeleteRequest,
+  viewMode = 'grid'
 }: RequestsListContentProps) => {
   return (
     <CardContent>
@@ -106,18 +109,30 @@ export const RequestsListContent = ({
           }
         </div>
       ) : (
-        <div className="space-y-4">
-          {filteredRequests.map((request) => (
-            <RequestCard
-              key={request.id}
-              request={request}
-              isSelected={selectedRequests.includes(request.id)}
-              isAdmin={isAdmin}
-              onSelectRequest={onSelectRequest}
-              onRequestClick={onRequestClick}
-              onDeleteRequest={onDeleteRequest}
-            />
-          ))}
+        <div className={viewMode === 'grid' ? 'grid grid-cols-1 lg:grid-cols-2 gap-6' : 'space-y-4'}>
+          {filteredRequests.map((request) => 
+            viewMode === 'grid' ? (
+              <EnhancedRequestCard
+                key={request.id}
+                request={request}
+                isSelected={selectedRequests.includes(request.id)}
+                isAdmin={isAdmin}
+                onSelectRequest={onSelectRequest}
+                onRequestClick={onRequestClick}
+                onDeleteRequest={onDeleteRequest}
+              />
+            ) : (
+              <RequestCard
+                key={request.id}
+                request={request}
+                isSelected={selectedRequests.includes(request.id)}
+                isAdmin={isAdmin}
+                onSelectRequest={onSelectRequest}
+                onRequestClick={onRequestClick}
+                onDeleteRequest={onDeleteRequest}
+              />
+            )
+          )}
         </div>
       )}
     </CardContent>

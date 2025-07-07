@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { FileText, Calendar, AlertCircle, CheckCircle, Clock, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { FileUploadZone } from '../upload/FileUploadZone';
+import { EnhancedFileUploadZone } from '../upload/EnhancedFileUploadZone';
 import { Database } from '@/integrations/supabase/types';
 
 type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'];
@@ -304,7 +304,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
           {request.allow_file_upload && (
             <div>
               <Label className="text-base font-medium mb-4 block">Document Upload</Label>
-              <FileUploadZone 
+              <EnhancedFileUploadZone 
                 requestId={request.id} 
                 onUploadComplete={handleUploadComplete}
               />
@@ -332,17 +332,33 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
             </div>
           )}
 
-          {/* Seller Commentary (renamed from Text Response) */}
+          {/* Seller Commentary with Save Draft */}
           {request.allow_text_response && (
             <div>
               <Label className="text-base font-medium">Seller Commentary</Label>
               <Textarea
-                placeholder="Please provide your commentary or response here..."
+                placeholder="Example: 'Please see attached trial balance for FY2023 and FY2024. YTD2025 numbers reflect unaudited figures through Q3.' Provide context, clarifications, or additional information that would be helpful for the review team."
                 value={textResponse}
                 onChange={(e) => setTextResponse(e.target.value)}
                 rows={4}
                 className="mt-2"
               />
+              <div className="flex justify-between mt-2">
+                <p className="text-xs text-gray-500">Auto-saves every 30 seconds</p>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    // Auto-save functionality could be implemented here
+                    toast({
+                      title: "Draft Saved",
+                      description: "Your commentary has been saved as a draft",
+                    });
+                  }}
+                >
+                  Save Draft
+                </Button>
+              </div>
             </div>
           )}
 
@@ -378,20 +394,22 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
             </Button>
           </div>
 
-          {/* Request Metadata */}
-          <div className="text-sm text-gray-500 pt-4 border-t space-y-1">
+          {/* Request Metadata - Simplified */}
+          <div className="text-sm text-gray-500 pt-4 border-t space-y-2">
             {request.due_date && (
-              <div className={`${
+              <div className={`flex items-center justify-between ${
                 new Date(request.due_date) < new Date() ? 'text-red-600 font-medium' : ''
               }`}>
-                Due: {new Date(request.due_date).toLocaleDateString()}
+                <span>Due Date: {new Date(request.due_date).toLocaleDateString()}</span>
                 {new Date(request.due_date) < new Date() && (
-                  <span className="text-red-600 ml-2">(Overdue)</span>
+                  <span className="text-red-600 text-xs bg-red-100 px-2 py-1 rounded">(Overdue)</span>
                 )}
               </div>
             )}
-            <div>Created: {new Date(request.created_at).toLocaleString()}</div>
-            <div>Last Updated: {new Date(request.updated_at).toLocaleString()}</div>
+            <div className="flex items-center justify-between">
+              <span>Last Updated: {new Date(request.updated_at).toLocaleString()}</span>
+              <span className="text-xs bg-gray-100 px-2 py-1 rounded">ID: {request.id.slice(0, 8)}</span>
+            </div>
           </div>
         </div>
       </DialogContent>

@@ -207,27 +207,29 @@ export const EnhancedRequestCard = ({
                   </div>
                 </div>
 
-                {/* Period Badge */}
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <Badge variant="outline" className="font-medium text-blue-700 border-blue-200 bg-blue-50">
-                    {period}
-                  </Badge>
-                  {daysRemaining !== null && (
-                    <Badge 
-                      variant="outline" 
-                      className={`font-medium ${
-                        isOverdue ? 'text-red-700 border-red-200 bg-red-50' : 
-                        daysRemaining <= 7 ? 'text-amber-700 border-amber-200 bg-amber-50' :
-                        'text-gray-700 border-gray-200 bg-gray-50'
-                      }`}
-                    >
-                      {isOverdue ? `${Math.abs(daysRemaining)} days overdue` : 
-                       daysRemaining === 0 ? 'Due today' :
-                       `${daysRemaining} days remaining`}
+                {/* Period Badge - Only show if period is defined */}
+                {period !== 'Period TBD' && (
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-gray-500" />
+                    <Badge variant="outline" className="font-medium text-blue-700 border-blue-200 bg-blue-50">
+                      {period}
                     </Badge>
-                  )}
-                </div>
+                    {daysRemaining !== null && (
+                      <Badge 
+                        variant="outline" 
+                        className={`font-medium ${
+                          isOverdue ? 'text-red-700 border-red-200 bg-red-50' : 
+                          daysRemaining <= 7 ? 'text-amber-700 border-amber-200 bg-amber-50' :
+                          'text-gray-700 border-gray-200 bg-gray-50'
+                        }`}
+                      >
+                        {isOverdue ? `${Math.abs(daysRemaining)} days overdue` : 
+                         daysRemaining === 0 ? 'Due today' :
+                         `${daysRemaining} days remaining`}
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </div>
               
               {/* Description - Truncated with hover tooltip */}

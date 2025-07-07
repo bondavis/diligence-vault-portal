@@ -138,6 +138,38 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
       filtered = filtered.filter(req => req.computed_status === activeFilters.status);
     }
 
+    // Apply priority-based sorting: Financial high → HR high → Legal high → others
+    filtered.sort((a, b) => {
+      // Create priority scoring
+      const getPriorityScore = (request: DiligenceRequest) => {
+        const { priority, category } = request;
+        
+        // Highest priority: Financial + High
+        if (category === 'Financial' && priority === 'high') return 1;
+        // Second: HR + High  
+        if (category === 'HR' && priority === 'high') return 2;
+        // Third: Legal + High
+        if (category === 'Legal' && priority === 'high') return 3;
+        
+        // Then other high priority requests
+        if (priority === 'high') return 4;
+        // Then medium priority requests
+        if (priority === 'medium') return 5;
+        // Finally low priority requests
+        return 6;
+      };
+
+      const scoreA = getPriorityScore(a);
+      const scoreB = getPriorityScore(b);
+      
+      // Sort by priority score, then by creation date (newest first)
+      if (scoreA !== scoreB) {
+        return scoreA - scoreB;
+      }
+      
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
+
     setFilteredRequests(filtered);
   }, [requests, activeFilters]);
 

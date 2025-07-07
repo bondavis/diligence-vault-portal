@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { auditLogger } from '@/utils/auditLogger';
 
 interface Profile {
   id: string;
@@ -27,6 +28,13 @@ export const useAuth = () => {
         console.log('Auth state change:', event, session?.user?.email);
         setSession(session);
         setUser(session?.user ?? null);
+
+        // Log authentication events
+        if (event === 'SIGNED_IN' && session?.user) {
+          await auditLogger.logLogin();
+        } else if (event === 'SIGNED_OUT') {
+          await auditLogger.logLogout();
+        }
         
         if (session?.user) {
           // Fetch user profile with a small delay to avoid deadlock
@@ -40,15 +48,15 @@ export const useAuth = () => {
               
               if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching profile:', error);
-                // Create default profile if none exists - use admin for testing
-                const defaultProfile: Profile = {
+                // Security fix: Default to most restrictive role when profile unavailable
+                const restrictedProfile: Profile = {
                   id: session.user.id,
                   email: session.user.email || '',
                   name: session.user.email?.split('@')[0] || 'User',
-                  role: 'admin', // Default to admin role for testing
+                  role: 'seller', // Default to most restrictive role for security
                   created_at: new Date().toISOString(),
                 };
-                setProfile(defaultProfile);
+                setProfile(restrictedProfile);
               } else if (profileData) {
                 // Type cast the profile data to ensure it matches our interface
                 const typedProfile: Profile = {
@@ -66,12 +74,12 @@ export const useAuth = () => {
               }
             } catch (error) {
               console.error('Error in profile fetch:', error);
-              // Fallback profile with admin role
+              // Security fix: Fallback to most restrictive role
               const fallbackProfile: Profile = {
                 id: session.user.id,
                 email: session.user.email || '',
                 name: session.user.email?.split('@')[0] || 'User',
-                role: 'admin',
+                role: 'seller', // Default to most restrictive role for security
                 created_at: new Date().toISOString(),
               };
               setProfile(fallbackProfile);

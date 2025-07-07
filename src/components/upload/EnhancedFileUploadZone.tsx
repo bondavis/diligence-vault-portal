@@ -6,6 +6,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Upload, X, File, CheckCircle, Image, FileText, AlertCircle, Eye, Download, Trash2 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { auditLogger } from '@/utils/auditLogger';
+import { validateFileName } from '@/utils/inputValidation';
 
 interface EnhancedFileUploadZoneProps {
   requestId: string;
@@ -101,16 +103,20 @@ export const EnhancedFileUploadZone = ({ requestId, onUploadComplete }: Enhanced
     if (!allowedTypes.includes(file.type)) {
       return `File type not supported. Please use PDF, DOC, DOCX, XLS, XLSX, or image files.`;
     }
+    
+    // Enhanced filename validation using utility function
+    const filenameValidation = validateFileName(file.name);
+    if (!filenameValidation.isValid) {
+      return filenameValidation.error;
+    }
+    
     // Additional security: check file extension matches MIME type
     const extension = file.name.split('.').pop()?.toLowerCase();
     const validExtensions = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg'];
     if (!extension || !validExtensions.includes(extension)) {
       return `Invalid file extension. Only ${validExtensions.join(', ')} files are allowed.`;
     }
-    // Check for suspicious file names
-    if (file.name.includes('..') || file.name.includes('/') || file.name.includes('\\')) {
-      return `Invalid filename. Path traversal characters not allowed.`;
-    }
+    
     return null;
   };
 
@@ -220,6 +226,9 @@ export const EnhancedFileUploadZone = ({ requestId, onUploadComplete }: Enhanced
 
         if (dbError) throw dbError;
 
+        // Log file upload for audit
+        await auditLogger.logFileUpload(file.name, file.size, requestId);
+
         // Update progress
         setUploadProgress(((i + 1) / validFiles.length) * 100);
       }
@@ -270,6 +279,9 @@ export const EnhancedFileUploadZone = ({ requestId, onUploadComplete }: Enhanced
         .download(doc.storage_path);
 
       if (error) throw error;
+
+      // Log file download for audit
+      await auditLogger.logFileDownload(doc.filename, doc.id);
 
       const url = URL.createObjectURL(data);
       const a = document.createElement('a');

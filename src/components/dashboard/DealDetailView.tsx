@@ -14,6 +14,8 @@ import { FAQWidget } from './FAQWidget';
 import { useDealRequests } from './deal-detail/useDealRequests';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { auditLogger } from '@/utils/auditLogger';
+import { DashboardErrorBoundary } from '@/components/error/ErrorBoundary';
 
 type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'] & {
   document_count?: number;
@@ -60,10 +62,12 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
   }>({});
   const { toast } = useToast();
 
-  // Load questionnaire status
+  // Load questionnaire status and log deal access
   useEffect(() => {
     loadQuestionnaireStatus();
-  }, [deal.id]);
+    // Log deal access for audit
+    auditLogger.logDealAccess(deal.id, deal.name);
+  }, [deal.id, deal.name]);
 
   const loadQuestionnaireStatus = async () => {
     try {
@@ -232,56 +236,72 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
   }
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      {/* Main Content */}
-      <div className="lg:col-span-2 space-y-6">
-        <TimelineProjectCard 
-          deal={deal} 
-          overallCompletionPercentage={overallCompletionPercentage} 
-          onBack={onBack} 
-        />
+    <DashboardErrorBoundary>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Main Content */}
+        <div className="lg:col-span-2 space-y-6">
+          <DashboardErrorBoundary>
+            <TimelineProjectCard 
+              deal={deal} 
+              overallCompletionPercentage={overallCompletionPercentage} 
+              onBack={onBack} 
+            />
+          </DashboardErrorBoundary>
 
-        <DealProgressCard categoryProgress={categoryProgress} />
+          <DashboardErrorBoundary>
+            <DealProgressCard categoryProgress={categoryProgress} />
+          </DashboardErrorBoundary>
 
-        <QuestionnaireCard 
-          status={questionnaireStatus}
-          onStart={() => setShowQuestionnaire(true)}
-          loading={loading}
-        />
+          <DashboardErrorBoundary>
+            <QuestionnaireCard 
+              status={questionnaireStatus}
+              onStart={() => setShowQuestionnaire(true)}
+              loading={loading}
+            />
+          </DashboardErrorBoundary>
 
-        <DealActions 
-          onLoadTemplate={handleLoadTemplate} 
-          loadingTemplate={loadingTemplate} 
-        />
+          <DashboardErrorBoundary>
+            <DealActions 
+              onLoadTemplate={handleLoadTemplate} 
+              loadingTemplate={loadingTemplate} 
+            />
+          </DashboardErrorBoundary>
 
-        <RequestsList
-          requests={requests}
-          filteredRequests={filteredRequests}
-          loading={loading}
-          showFilters={showFilters}
-          activeFilters={activeFilters}
-          onToggleFilters={() => setShowFilters(!showFilters)}
-          onFilterChange={setActiveFilters}
-          onRequestClick={setSelectedRequest}
-          onRequestsUpdated={handleRequestsUpdated}
-          getRequestCounts={getRequestCounts}
+          <DashboardErrorBoundary>
+            <RequestsList
+              requests={requests}
+              filteredRequests={filteredRequests}
+              loading={loading}
+              showFilters={showFilters}
+              activeFilters={activeFilters}
+              onToggleFilters={() => setShowFilters(!showFilters)}
+              onFilterChange={setActiveFilters}
+              onRequestClick={setSelectedRequest}
+              onRequestsUpdated={handleRequestsUpdated}
+              getRequestCounts={getRequestCounts}
+              isAdmin={true}
+            />
+          </DashboardErrorBoundary>
+        </div>
+
+        {/* Sidebar */}
+        <div className="lg:col-span-1 space-y-6">
+          <DashboardErrorBoundary>
+            <RecentActivity dealId={deal.id} />
+          </DashboardErrorBoundary>
+          <DashboardErrorBoundary>
+            <FAQWidget />
+          </DashboardErrorBoundary>
+        </div>
+
+        <RequestDetailModal
+          request={selectedRequest}
+          isOpen={!!selectedRequest}
+          onClose={() => setSelectedRequest(null)}
+          onUpdate={loadDealRequests}
           isAdmin={true}
         />
       </div>
-
-      {/* Sidebar */}
-      <div className="lg:col-span-1 space-y-6">
-        <RecentActivity dealId={deal.id} />
-        <FAQWidget />
-      </div>
-
-      <RequestDetailModal
-        request={selectedRequest}
-        isOpen={!!selectedRequest}
-        onClose={() => setSelectedRequest(null)}
-        onUpdate={loadDealRequests}
-        isAdmin={true}
-      />
-    </div>
+    </DashboardErrorBoundary>
   );
 };

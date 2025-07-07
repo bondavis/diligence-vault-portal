@@ -6,7 +6,7 @@ import { DealProgressCard } from './DealProgressCard';
 import { DealActions } from './DealActions';
 import { RequestsList } from './RequestsList';
 import { QuestionnaireCard } from './QuestionnaireCard';
-import { SellerQuestionnaire } from '@/components/questionnaire/SellerQuestionnaire';
+import { EnhancedSellerQuestionnaire } from '@/components/questionnaire/EnhancedSellerQuestionnaire';
 import { templateService } from '@/services/templateService';
 import { Database } from '@/integrations/supabase/types';
 import { RecentActivity } from './RecentActivity';
@@ -190,7 +190,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
   // If showing questionnaire, render it full screen
   if (showQuestionnaire) {
     return (
-      <SellerQuestionnaire
+      <EnhancedSellerQuestionnaire
         dealId={deal.id}
         dealName={deal.name}
         onComplete={handleQuestionnaireComplete}

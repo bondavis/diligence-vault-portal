@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { RequestDetailModal } from './RequestDetailModal';
-import { DealHeader } from './DealHeader';
+import { TimelineProjectCard } from './TimelineProjectCard';
 import { DealProgressCard } from './DealProgressCard';
 import { DealActions } from './DealActions';
 import { RequestsList } from './RequestsList';
@@ -10,6 +10,7 @@ import { SellerQuestionnaire } from '@/components/questionnaire/SellerQuestionna
 import { templateService } from '@/services/templateService';
 import { Database } from '@/integrations/supabase/types';
 import { RecentActivity } from './RecentActivity';
+import { FAQWidget } from './FAQWidget';
 import { useDealRequests } from './deal-detail/useDealRequests';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -202,7 +203,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
       {/* Main Content */}
       <div className="lg:col-span-2 space-y-6">
-        <DealHeader 
+        <TimelineProjectCard 
           deal={deal} 
           overallCompletionPercentage={overallCompletionPercentage} 
           onBack={onBack} 
@@ -237,8 +238,9 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
       </div>
 
       {/* Sidebar */}
-      <div className="lg:col-span-1">
+      <div className="lg:col-span-1 space-y-6">
         <RecentActivity dealId={deal.id} />
+        <FAQWidget />
       </div>
 
       <RequestDetailModal

@@ -14,6 +14,9 @@ export type AuditEventType =
   | 'questionnaire_complete'
   | 'role_change'
   | 'deal_access'
+  | 'deal_create'
+  | 'user_assignment'
+  | 'user_create_and_assign'
   | 'unauthorized_access_attempt'
   | 'data_export'
   | 'security_violation';

@@ -12,6 +12,47 @@ export const sanitizeText = (input: string): string => {
     .trim();
 };
 
+export const validateInput = (input: string, type: 'text' | 'email' | 'number' = 'text'): { isValid: boolean; sanitized: string; error?: string } => {
+  const sanitized = sanitizeText(input);
+  
+  switch (type) {
+    case 'email':
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(sanitized)) {
+        return {
+          isValid: false,
+          sanitized,
+          error: 'Please enter a valid email address'
+        };
+      }
+      break;
+    case 'number':
+      if (isNaN(Number(sanitized))) {
+        return {
+          isValid: false,
+          sanitized,
+          error: 'Please enter a valid number'
+        };
+      }
+      break;
+    case 'text':
+    default:
+      if (sanitized.length === 0) {
+        return {
+          isValid: false,
+          sanitized,
+          error: 'This field is required'
+        };
+      }
+      break;
+  }
+  
+  return {
+    isValid: true,
+    sanitized
+  };
+};
+
 export const validateQuestionnaireResponse = (response: string, questionType: string): {
   isValid: boolean;
   sanitized: string;

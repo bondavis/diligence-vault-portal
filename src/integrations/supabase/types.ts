@@ -156,8 +156,12 @@ export type Database = {
           deal_id: string | null
           email: string
           id: string
+          invitation_status: string | null
+          invited_at: string | null
+          invited_by: string | null
           last_active: string | null
           name: string
+          organization: string | null
           role: string
         }
         Insert: {
@@ -165,8 +169,12 @@ export type Database = {
           deal_id?: string | null
           email: string
           id: string
+          invitation_status?: string | null
+          invited_at?: string | null
+          invited_by?: string | null
           last_active?: string | null
           name: string
+          organization?: string | null
           role: string
         }
         Update: {
@@ -174,8 +182,12 @@ export type Database = {
           deal_id?: string | null
           email?: string
           id?: string
+          invitation_status?: string | null
+          invited_at?: string | null
+          invited_by?: string | null
           last_active?: string | null
           name?: string
+          organization?: string | null
           role?: string
         }
         Relationships: []
@@ -405,6 +417,48 @@ export type Database = {
         }
         Relationships: []
       }
+      user_deals: {
+        Row: {
+          assigned_at: string
+          assigned_by: string
+          deal_id: string
+          id: string
+          role_in_deal: string
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by: string
+          deal_id: string
+          id?: string
+          role_in_deal?: string
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string
+          deal_id?: string
+          id?: string
+          role_in_deal?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_deals_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_deals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
@@ -416,6 +470,16 @@ export type Database = {
       }
       log_security_event: {
         Args: { event_type: string; user_id: string; details?: Json }
+        Returns: undefined
+      }
+      send_user_invitation: {
+        Args: {
+          user_email: string
+          user_name: string
+          deal_id: string
+          deal_name: string
+          invited_by_email: string
+        }
         Returns: undefined
       }
     }

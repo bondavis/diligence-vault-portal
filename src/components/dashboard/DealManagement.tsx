@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Building, Calendar, ChevronRight } from 'lucide-react';
+import { Building, Calendar, ChevronRight, Plus } from 'lucide-react';
 import { User } from '@/pages/Index';
 import { DealDetailView } from './DealDetailView';
+import { CreateDealModal } from '@/components/deals/CreateDealModal';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -162,6 +163,21 @@ export const DealManagement = ({ user }: DealManagementProps) => {
 
   return (
     <div className="space-y-6">
+      {/* Create Deal Header */}
+      <Card className="bg-gradient-to-r from-bb-red to-red-600 text-white">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-xl">Deal Management</CardTitle>
+              <CardDescription className="text-red-100">
+                Create and manage M&A deals throughout the entire acquisition process
+              </CardDescription>
+            </div>
+            <CreateDealModal onDealCreated={loadDeals} />
+          </div>
+        </CardHeader>
+      </Card>
+
       {/* Active Deals */}
       <Card>
         <CardHeader>

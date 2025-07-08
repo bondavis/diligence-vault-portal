@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Check, Calendar, Clock } from 'lucide-react';
+import { ArrowLeft, Check, Calendar, Clock, Users } from 'lucide-react';
+import { UserAssignmentModal } from '@/components/deals/UserAssignmentModal';
 import {
   Tooltip,
   TooltipContent,
@@ -87,6 +88,16 @@ export const TimelineProjectCard = ({ deal, overallCompletionPercentage, onBack 
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back to Deals
             </Button>
+            <UserAssignmentModal 
+              dealId={deal.id} 
+              dealName={deal.name}
+              trigger={
+                <Button variant="outline" size="sm">
+                  <Users className="h-4 w-4 mr-2" />
+                  Manage Users
+                </Button>
+              }
+            />
             <div>
               <CardTitle className="text-2xl">{deal.name}</CardTitle>
               <div className="flex items-center space-x-4 mt-1">

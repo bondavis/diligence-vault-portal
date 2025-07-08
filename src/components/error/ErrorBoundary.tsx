@@ -27,20 +27,21 @@ export class ErrorBoundary extends Component<Props, State> {
     return { hasError: true, error, errorInfo: null };
   }
 
-  async componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     this.setState({ errorInfo });
     
-    // Log error to audit system
-    try {
-      await auditLogger.logSecurityViolation('application_error', {
+    // Log error to audit system (non-blocking)
+    // Use setTimeout to avoid blocking the error boundary
+    setTimeout(() => {
+      auditLogger.logSecurityViolation('application_error', {
         error_message: error.message,
         error_stack: error.stack,
         component_stack: errorInfo.componentStack,
         error_boundary: true
+      }).catch((auditError) => {
+        console.error('Failed to log error to audit system:', auditError);
       });
-    } catch (auditError) {
-      console.error('Failed to log error to audit system:', auditError);
-    }
+    }, 0);
 
     // Call custom error handler if provided
     if (this.props.onError) {

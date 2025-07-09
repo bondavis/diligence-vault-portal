@@ -28,9 +28,13 @@ export const EmployeeCensusSpreadsheet: React.FC<EmployeeCensusSpreadsheetProps>
   onDataChange,
   initialData = []
 }) => {
-  const [employees, setEmployees] = useState<EmployeeRecord[]>(
-    initialData.length > 0 ? initialData : [createEmptyEmployee()]
-  );
+  const [employees, setEmployees] = useState<EmployeeRecord[]>(() => {
+    if (initialData.length > 0) {
+      return initialData;
+    }
+    // Create 10 empty rows by default
+    return Array.from({ length: 10 }, () => createEmptyEmployee());
+  });
 
   function createEmptyEmployee(): EmployeeRecord {
     return {

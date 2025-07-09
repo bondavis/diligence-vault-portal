@@ -246,14 +246,6 @@ export const EnhancedRequestCard = ({
                 </Tooltip>
               )}
 
-              {/* Progress Bar */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Progress</span>
-                  <span className="font-medium">{progress}%</span>
-                </div>
-                <Progress value={progress} className="h-2" />
-              </div>
               
               {/* Bottom section with category, status, and actions */}
               <div className="flex items-center justify-between">

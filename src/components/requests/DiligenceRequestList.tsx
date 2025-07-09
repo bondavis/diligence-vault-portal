@@ -8,6 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Upload, Check, Clock, AlertCircle } from 'lucide-react';
 import { User } from '@/pages/Index';
 import { FileUploadZone } from '@/components/upload/FileUploadZone';
+import { EmployeeCensusSpreadsheet } from '@/components/requests/EmployeeCensusSpreadsheet';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
@@ -284,6 +285,16 @@ export const DiligenceRequestList = ({ user }: DiligenceRequestListProps) => {
                               onChange={(e) => handleResponseTextChange(request.id, e.target.value)}
                               className="min-h-[100px]"
                             />
+                          </div>
+                        )}
+
+                        {/* Employee Census Spreadsheet for HR-related requests */}
+                        {(request.title.toLowerCase().includes('employee census') || 
+                          request.title.toLowerCase().includes('employee list') ||
+                          request.category === 'HR') && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Employee Census</label>
+                            <EmployeeCensusSpreadsheet />
                           </div>
                         )}
 

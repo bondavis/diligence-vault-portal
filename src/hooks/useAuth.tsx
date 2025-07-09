@@ -13,6 +13,9 @@ interface Profile {
   deal_id?: string;
   created_at: string;
   last_active?: string;
+  invitation_status?: string;
+  invited_at?: string;
+  invited_by?: string;
 }
 
 export const useAuth = () => {
@@ -63,11 +66,14 @@ export const useAuth = () => {
                   id: profileData.id,
                   email: profileData.email,
                   name: profileData.name,
-                  role: (profileData.role as Profile['role']) || 'admin',
-                  organization: (profileData as any).organization || undefined,
-                  deal_id: (profileData as any).deal_id || undefined,
+                  role: (profileData.role as Profile['role']) || 'seller',
+                  organization: profileData.organization || undefined,
+                  deal_id: profileData.deal_id || undefined,
                   created_at: profileData.created_at,
-                  last_active: (profileData as any).last_active || undefined
+                  last_active: profileData.last_active || undefined,
+                  invitation_status: profileData.invitation_status || undefined,
+                  invited_at: profileData.invited_at || undefined,
+                  invited_by: profileData.invited_by || undefined,
                 };
                 console.log('Profile loaded:', typedProfile);
                 setProfile(typedProfile);

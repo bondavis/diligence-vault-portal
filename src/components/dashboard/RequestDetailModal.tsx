@@ -11,6 +11,7 @@ import { FileText, Calendar, AlertCircle, CheckCircle, Clock, Send } from 'lucid
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { EnhancedFileUploadZone } from '../upload/EnhancedFileUploadZone';
+import { EmployeeCensusSpreadsheet } from '../requests/EmployeeCensusSpreadsheet';
 import { Database } from '@/integrations/supabase/types';
 
 type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'];
@@ -308,6 +309,16 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
                 requestId={request.id} 
                 onUploadComplete={handleUploadComplete}
               />
+            </div>
+          )}
+
+          {/* Employee Census Spreadsheet for Employee Census requests */}
+          {(request.title.toLowerCase().includes('employee census') || 
+            request.title.toLowerCase().includes('employee list') ||
+            request.category === 'HR') && (
+            <div>
+              <Label className="text-base font-medium mb-4 block">Employee Census</Label>
+              <EmployeeCensusSpreadsheet />
             </div>
           )}
 

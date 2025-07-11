@@ -30,8 +30,12 @@ const Index = () => {
   const { user, profile, loading } = useAuth();
   const navigate = useNavigate();
 
+  console.log('Index component state:', { user: !!user, profile: !!profile, loading });
+
   useEffect(() => {
+    console.log('Index useEffect triggered:', { loading, user: !!user });
     if (!loading && !user) {
+      console.log('Redirecting to /auth because no user found');
       navigate('/auth');
     }
   }, [user, loading, navigate]);

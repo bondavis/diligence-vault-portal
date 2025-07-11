@@ -23,31 +23,41 @@ export const useAuth = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  console.log('useAuth state:', { user: !!user, session: !!session, profile: !!profile, loading });
 
   useEffect(() => {
+    console.log('Setting up auth state listener');
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         console.log('Auth state change:', event, session?.user?.email);
+        console.log('Setting session and user from auth state change');
         setSession(session);
         setUser(session?.user ?? null);
 
         // Log authentication events
         if (event === 'SIGNED_IN' && session?.user) {
+          console.log('User signed in, logging audit event');
           await auditLogger.logLogin();
         } else if (event === 'SIGNED_OUT') {
+          console.log('User signed out, logging audit event');
           await auditLogger.logLogout();
         }
         
         if (session?.user) {
+          console.log('User exists, fetching profile with setTimeout');
           // Fetch user profile with a small delay to avoid deadlock
           setTimeout(async () => {
             try {
+              console.log('Starting profile fetch for user:', session.user.id);
               const { data: profileData, error } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', session.user.id)
                 .single();
+              
+              console.log('Profile fetch result:', { profileData, error });
               
               if (error && error.code !== 'PGRST116') {
                 console.error('Error fetching profile:', error);
@@ -59,6 +69,7 @@ export const useAuth = () => {
                   role: 'seller', // Default to most restrictive role for security
                   created_at: new Date().toISOString(),
                 };
+                console.log('Setting restricted profile:', restrictedProfile);
                 setProfile(restrictedProfile);
               } else if (profileData) {
                 // Type cast the profile data to ensure it matches our interface
@@ -88,26 +99,34 @@ export const useAuth = () => {
                 role: 'seller', // Default to most restrictive role for security
                 created_at: new Date().toISOString(),
               };
+              console.log('Setting fallback profile:', fallbackProfile);
               setProfile(fallbackProfile);
             }
           }, 100);
         } else {
+          console.log('No user, clearing profile');
           setProfile(null);
         }
         
+        console.log('Setting loading to false');
         setLoading(false);
       }
     );
 
     // Check for existing session on mount
+    console.log('Checking for existing session on mount');
     supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log('Initial session check:', session?.user?.email);
+      console.log('Initial session check result:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
+      console.log('Setting loading to false after initial session check');
       setLoading(false); // Always set loading to false after initial check
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      console.log('Cleaning up auth subscription');
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signOut = async () => {

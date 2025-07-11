@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { Login } from '@/components/auth/Login';
@@ -7,25 +7,12 @@ import { Login } from '@/components/auth/Login';
 const Auth = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const [forceTimeout, setForceTimeout] = useState(false);
 
   useEffect(() => {
     if (!loading && user) {
       navigate('/');
     }
   }, [user, loading, navigate]);
-
-  // Force timeout after 5 seconds if still loading
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (loading) {
-        console.log('Auth loading timeout - forcing page refresh');
-        window.location.href = '/';
-      }
-    }, 5000);
-
-    return () => clearTimeout(timer);
-  }, [loading]);
 
   if (loading) {
     return (

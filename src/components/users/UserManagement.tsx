@@ -1,79 +1,132 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { User, UserRole } from '@/pages/Index';
 import { UserFilters } from './UserFilters';
 import { UsersTable } from './UsersTable';
 import { UserActions } from './UserActions';
+import { EditUserModal } from './EditUserModal';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
+import { Loader2 } from 'lucide-react';
+
+interface UserWithDeal {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  organization: string | null;
+  invitation_status: string | null;
+  last_active: string | null;
+  dealName?: string;
+  dealId?: string;
+}
 
 export const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [orgFilter, setOrgFilter] = useState<string>('all');
+  const [users, setUsers] = useState<UserWithDeal[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [editingUser, setEditingUser] = useState<UserWithDeal | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const { toast } = useToast();
 
-  // Mock users data with new role structure
-  const users: (User & { dealName?: string; lastActive: string })[] = [
-    {
-      id: '1',
-      email: 'admin@bigbrandtire.com',
-      name: 'Sarah Chen',
-      role: 'bbt_execution_team',
-      organization: 'BBT',
-      lastActive: '2024-01-15'
-    },
-    {
-      id: '2',
-      email: 'operations@bigbrandtire.com',
-      name: 'Michael Torres',
-      role: 'bbt_operations',
-      organization: 'BBT',
-      lastActive: '2024-01-14'
-    },
-    {
-      id: '3',
-      email: 'legal@bigbrandtire.com',
-      name: 'Jennifer Walsh',
-      role: 'bbt_legal',
-      organization: 'BBT',
-      lastActive: '2024-01-13'
-    },
-    {
-      id: '4',
-      email: 'seller@techacq.com',
-      name: 'David Kim',
-      role: 'seller',
-      organization: 'Seller',
-      dealId: 'deal-1',
-      dealName: 'TechCorp Acquisition',
-      lastActive: '2024-01-12'
-    },
-    {
-      id: '5',
-      email: 'legal@sellercorp.com',
-      name: 'Lisa Rodriguez',
-      role: 'seller_legal',
-      organization: 'Seller',
-      dealId: 'deal-1',
-      dealName: 'TechCorp Acquisition',
-      lastActive: '2024-01-11'
-    },
-    {
-      id: '6',
-      email: 'analyst@rsm.com',
-      name: 'Robert Johnson',
-      role: 'rsm',
-      organization: 'RSM',
-      lastActive: '2024-01-10'
-    },
-    {
-      id: '7',
-      email: 'partner@hensen-efron.com',
-      name: 'Amanda Clark',
-      role: 'hensen_efron',
-      organization: 'Hensen & Efron',
-      lastActive: '2024-01-09'
+  // Load users from database
+  const loadUsers = async () => {
+    setIsLoading(true);
+    try {
+      const { data: profilesData, error: profilesError } = await supabase
+        .from('profiles')
+        .select(`
+          id,
+          name,
+          email,
+          role,
+          organization,
+          invitation_status,
+          last_active
+        `)
+        .order('created_at', { ascending: false });
+
+      if (profilesError) throw profilesError;
+
+      // Get user deal assignments
+      const { data: userDealsData, error: userDealsError } = await supabase
+        .from('user_deals')
+        .select(`
+          user_id,
+          deal_id,
+          deals (
+            id,
+            name,
+            company_name
+          )
+        `);
+
+      if (userDealsError) throw userDealsError;
+
+      // Merge user data with deal assignments
+      const usersWithDeals: UserWithDeal[] = profilesData.map(profile => {
+        const userDeal = userDealsData.find(ud => ud.user_id === profile.id);
+        const deal = userDeal?.deals as any;
+        
+        return {
+          ...profile,
+          dealName: deal ? `${deal.name} (${deal.company_name})` : undefined,
+          dealId: deal?.id,
+        };
+      });
+
+      setUsers(usersWithDeals);
+    } catch (error) {
+      console.error('Error loading users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    loadUsers();
+  }, []);
+
+  const handleEditUser = (user: UserWithDeal) => {
+    setEditingUser(user);
+    setEditModalOpen(true);
+  };
+
+  const handleRemoveUser = async (user: UserWithDeal) => {
+    if (!confirm(`Are you sure you want to remove ${user.name}? This will deactivate their account.`)) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ invitation_status: 'inactive' })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "User Removed",
+        description: `${user.name} has been deactivated.`,
+      });
+
+      loadUsers(); // Refresh the list
+    } catch (error) {
+      console.error('Error removing user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove user. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const filteredUsers = users.filter(user => {
     const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -92,7 +145,7 @@ export const UserManagement = () => {
               <CardTitle>User Management</CardTitle>
               <CardDescription>Manage user access and permissions across all deals</CardDescription>
             </div>
-            <UserActions />
+            <UserActions onUserInvited={loadUsers} />
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -105,15 +158,35 @@ export const UserManagement = () => {
             onOrgFilterChange={setOrgFilter}
           />
 
-          <UsersTable users={filteredUsers} />
-
-          {filteredUsers.length === 0 && (
-            <div className="text-center py-8 text-muted-foreground">
-              No users found matching your search criteria.
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin" />
+              <span className="ml-2">Loading users...</span>
             </div>
+          ) : (
+            <>
+              <UsersTable 
+                users={filteredUsers} 
+                onEditUser={handleEditUser}
+                onRemoveUser={handleRemoveUser}
+              />
+
+              {filteredUsers.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  No users found matching your search criteria.
+                </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
+
+      <EditUserModal
+        open={editModalOpen}
+        onOpenChange={setEditModalOpen}
+        user={editingUser}
+        onUserUpdated={loadUsers}
+      />
     </div>
   );
 };

@@ -1,8 +1,7 @@
 
-import { UserRole } from '@/pages/Index';
 import { Shield, Building, Users, Mail } from 'lucide-react';
 
-export const getRoleColor = (role: UserRole): string => {
+export const getRoleColor = (role: string): string => {
   switch (role) {
     case 'admin': return 'bg-purple-100 text-purple-800';
     case 'bbt_execution_team': return 'bg-red-100 text-red-800';
@@ -19,15 +18,15 @@ export const getRoleColor = (role: UserRole): string => {
   }
 };
 
-export const getRoleIcon = (role: UserRole) => {
+export const getRoleIcon = (role: string) => {
   if (role === 'admin' || role === 'bbt_execution_team') return Shield;
   if (role.startsWith('bbt_')) return Building;
   if (role.startsWith('seller')) return Users;
   return Mail;
 };
 
-export const getRoleDisplayName = (role: UserRole): string => {
-  const roleMap: Record<UserRole, string> = {
+export const getRoleDisplayName = (role: string): string => {
+  const roleMap: Record<string, string> = {
     admin: 'Admin',
     bbt_execution_team: 'BBT Execution Team',
     bbt_operations: 'BBT Operations',

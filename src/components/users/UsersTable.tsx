@@ -2,14 +2,27 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { User } from '@/pages/Index';
 import { getRoleColor, getRoleIcon, getRoleDisplayName } from './utils/roleUtils';
 
-interface UsersTableProps {
-  users: (User & { dealName?: string; lastActive: string })[];
+interface UserWithDeal {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  organization: string | null;
+  invitation_status: string | null;
+  last_active: string | null;
+  dealName?: string;
+  dealId?: string;
 }
 
-export const UsersTable = ({ users }: UsersTableProps) => {
+interface UsersTableProps {
+  users: UserWithDeal[];
+  onEditUser: (user: UserWithDeal) => void;
+  onRemoveUser: (user: UserWithDeal) => void;
+}
+
+export const UsersTable = ({ users, onEditUser, onRemoveUser }: UsersTableProps) => {
   return (
     <div className="rounded-md border">
       <Table>
@@ -18,6 +31,7 @@ export const UsersTable = ({ users }: UsersTableProps) => {
             <TableHead>User</TableHead>
             <TableHead>Organization</TableHead>
             <TableHead>Role</TableHead>
+            <TableHead>Status</TableHead>
             <TableHead>Assigned Deal</TableHead>
             <TableHead>Last Active</TableHead>
             <TableHead>Actions</TableHead>
@@ -26,6 +40,19 @@ export const UsersTable = ({ users }: UsersTableProps) => {
         <TableBody>
           {users.map(user => {
             const RoleIcon = getRoleIcon(user.role);
+            const getStatusBadge = (status: string | null) => {
+              switch (status) {
+                case 'pending':
+                  return <Badge variant="outline" className="text-yellow-600 border-yellow-600">Pending</Badge>;
+                case 'active':
+                  return <Badge variant="outline" className="text-green-600 border-green-600">Active</Badge>;
+                case 'inactive':
+                  return <Badge variant="outline" className="text-red-600 border-red-600">Inactive</Badge>;
+                default:
+                  return <Badge variant="outline">Unknown</Badge>;
+              }
+            };
+
             return (
               <TableRow key={user.id}>
                 <TableCell>
@@ -36,7 +63,7 @@ export const UsersTable = ({ users }: UsersTableProps) => {
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary" className="font-medium">
-                    {user.organization}
+                    {user.organization || 'No Organization'}
                   </Badge>
                 </TableCell>
                 <TableCell>
@@ -46,6 +73,9 @@ export const UsersTable = ({ users }: UsersTableProps) => {
                       <span>{getRoleDisplayName(user.role)}</span>
                     </div>
                   </Badge>
+                </TableCell>
+                <TableCell>
+                  {getStatusBadge(user.invitation_status)}
                 </TableCell>
                 <TableCell>
                   {user.dealName ? (
@@ -58,13 +88,13 @@ export const UsersTable = ({ users }: UsersTableProps) => {
                 </TableCell>
                 <TableCell>
                   <div className="text-sm">
-                    {new Date(user.lastActive).toLocaleDateString()}
+                    {user.last_active ? new Date(user.last_active).toLocaleDateString() : 'Never'}
                   </div>
                 </TableCell>
                 <TableCell>
                   <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">Edit</Button>
-                    <Button variant="outline" size="sm">Remove</Button>
+                    <Button variant="outline" size="sm" onClick={() => onEditUser(user)}>Edit</Button>
+                    <Button variant="outline" size="sm" onClick={() => onRemoveUser(user)}>Remove</Button>
                   </div>
                 </TableCell>
               </TableRow>

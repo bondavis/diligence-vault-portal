@@ -104,7 +104,58 @@ export const useAuth = () => {
       console.log('Initial session check:', session?.user?.email);
       setSession(session);
       setUser(session?.user ?? null);
-      if (!session) {
+      
+      if (session?.user) {
+        // If user exists, fetch profile and then set loading to false
+        setTimeout(async () => {
+          try {
+            const { data: profileData, error } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', session.user.id)
+              .single();
+            
+            if (error && error.code !== 'PGRST116') {
+              console.error('Error fetching profile:', error);
+              const restrictedProfile: Profile = {
+                id: session.user.id,
+                email: session.user.email || '',
+                name: session.user.email?.split('@')[0] || 'User',
+                role: 'seller',
+                created_at: new Date().toISOString(),
+              };
+              setProfile(restrictedProfile);
+            } else if (profileData) {
+              const typedProfile: Profile = {
+                id: profileData.id,
+                email: profileData.email,
+                name: profileData.name,
+                role: (profileData.role as Profile['role']) || 'seller',
+                organization: profileData.organization || undefined,
+                deal_id: profileData.deal_id || undefined,
+                created_at: profileData.created_at,
+                last_active: profileData.last_active || undefined,
+                invitation_status: profileData.invitation_status || undefined,
+                invited_at: profileData.invited_at || undefined,
+                invited_by: profileData.invited_by || undefined,
+              };
+              setProfile(typedProfile);
+            }
+          } catch (error) {
+            console.error('Error in profile fetch:', error);
+            const fallbackProfile: Profile = {
+              id: session.user.id,
+              email: session.user.email || '',
+              name: session.user.email?.split('@')[0] || 'User',
+              role: 'seller',
+              created_at: new Date().toISOString(),
+            };
+            setProfile(fallbackProfile);
+          } finally {
+            setLoading(false);
+          }
+        }, 100);
+      } else {
         setLoading(false);
       }
     });

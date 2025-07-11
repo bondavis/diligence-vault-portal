@@ -35,14 +35,18 @@ export const useAuth = () => {
         console.log('Setting session and user from auth state change');
         setSession(session);
         setUser(session?.user ?? null);
+        
+        // Set loading to false IMMEDIATELY to unblock the UI
+        console.log('Setting loading to false FIRST');
+        setLoading(false);
 
-        // Log authentication events
+        // Log authentication events (don't block on this)
         if (event === 'SIGNED_IN' && session?.user) {
           console.log('User signed in, logging audit event');
-          await auditLogger.logLogin();
+          auditLogger.logLogin().catch(console.error); // Don't await, don't block
         } else if (event === 'SIGNED_OUT') {
           console.log('User signed out, logging audit event');
-          await auditLogger.logLogout();
+          auditLogger.logLogout().catch(console.error); // Don't await, don't block
         }
         
         if (session?.user) {
@@ -107,9 +111,6 @@ export const useAuth = () => {
           console.log('No user, clearing profile');
           setProfile(null);
         }
-        
-        console.log('Setting loading to false');
-        setLoading(false);
       }
     );
 

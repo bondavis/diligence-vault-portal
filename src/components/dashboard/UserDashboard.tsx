@@ -30,23 +30,23 @@ export const UserDashboard = ({ user }: UserDashboardProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Deal Header with Big Brand Tire styling */}
-      <Card className="bg-gradient-to-r from-bb-red to-red-600 text-white">
+      {/* Deal Header */}
+      <Card className="bg-card border-l-4 border-l-primary">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl">{dealInfo.dealName}</CardTitle>
-              <CardDescription className="text-red-100">
+              <CardTitle className="text-2xl text-foreground">{dealInfo.dealName}</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Deal Code: {dealInfo.dealCode} • Target Close: {new Date(dealInfo.targetClose).toLocaleDateString()}
               </CardDescription>
             </div>
             <div className="text-right">
-              <div className="text-3xl font-bold">{dealInfo.overallProgress}%</div>
-              <div className="text-sm text-red-100">Complete</div>
+              <div className="text-3xl font-bold text-foreground">{dealInfo.overallProgress}%</div>
+              <div className="text-sm text-muted-foreground">Complete</div>
             </div>
           </div>
           <div className="mt-4">
-            <Progress value={dealInfo.overallProgress} className="bg-red-500" />
+            <Progress value={dealInfo.overallProgress} className="bg-muted" />
           </div>
         </CardHeader>
       </Card>

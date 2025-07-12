@@ -199,12 +199,12 @@ export const QuestionnaireManager = () => {
 
   return (
     <div className="space-y-6">
-      <Card className="bg-gradient-to-r from-bb-red to-red-600 text-white">
+      <Card className="bg-card border-l-4 border-l-primary">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl">Post-LOI Questionnaire Manager</CardTitle>
-              <CardDescription className="text-red-100">
+              <CardTitle className="text-2xl text-foreground">Post-LOI Questionnaire Manager</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Manage questionnaire questions and preview the seller experience
               </CardDescription>
             </div>

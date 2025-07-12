@@ -10,13 +10,13 @@ interface AdminDashboardProps {
 export const AdminDashboard = ({ user }: AdminDashboardProps) => {
   return (
     <div className="space-y-6">
-      {/* Big Brand Tire Admin Header */}
-      <Card className="bg-gradient-to-r from-bb-red to-red-600 text-white">
+      {/* Admin Header */}
+      <Card className="bg-card border-l-4 border-l-primary">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl">Admin Dashboard</CardTitle>
-              <CardDescription className="text-red-100">
+              <CardTitle className="text-2xl text-foreground">Admin Dashboard</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 {user.role === 'bbt_execution_team' 
                   ? 'Full administrative access - manage deals, templates, and users'
                   : 'Administrative access for BBT team members'

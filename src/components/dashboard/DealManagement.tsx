@@ -163,13 +163,13 @@ export const DealManagement = ({ user }: DealManagementProps) => {
 
   return (
     <div className="space-y-6">
-      {/* Create Deal Header */}
-      <Card className="bg-gradient-to-r from-bb-red to-red-600 text-white">
+      {/* Deal Management Header */}
+      <Card className="bg-card border-l-4 border-l-primary">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-xl">Deal Management</CardTitle>
-              <CardDescription className="text-red-100">
+              <CardTitle className="text-xl text-foreground">Deal Management</CardTitle>
+              <CardDescription className="text-muted-foreground">
                 Create and manage M&A deals throughout the entire acquisition process
               </CardDescription>
             </div>

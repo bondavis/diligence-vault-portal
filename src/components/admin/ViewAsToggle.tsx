@@ -28,24 +28,32 @@ export const ViewAsToggle = ({ currentRole, onRoleChange }: ViewAsToggleProps) =
   const currentRoleInfo = roleOptions.find(option => option.value === currentRole);
 
   return (
-    <Card className="bg-amber-50 border-amber-200">
-      <CardContent className="py-3">
+    <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200 shadow-sm">
+      <CardContent className="py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2">
-              <Eye className="h-4 w-4 text-amber-600" />
-              <span className="text-sm font-medium text-amber-800">Admin View Mode:</span>
+              <div className="p-2 bg-blue-100 rounded-full">
+                <Eye className="h-4 w-4 text-blue-600" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-blue-900">Admin View Mode</div>
+                <div className="text-xs text-blue-600">Dashboard perspective control</div>
+              </div>
             </div>
-            <Badge variant="outline" className="bg-amber-100 text-amber-800 border-amber-300">
-              <User className="h-3 w-3 mr-1" />
+            <Badge variant="secondary" className="bg-blue-100 text-blue-800 border-blue-200 px-3 py-1">
+              <User className="h-3 w-3 mr-2" />
               Viewing as {currentRoleInfo?.label}
             </Badge>
           </div>
           
-          <div className="flex items-center space-x-3">
-            <span className="text-xs text-amber-700">{currentRoleInfo?.description}</span>
+          <div className="flex items-center space-x-4">
+            <div className="text-right">
+              <div className="text-xs font-medium text-blue-700">{currentRoleInfo?.description}</div>
+              <div className="text-xs text-blue-500">{currentRoleInfo?.organization}</div>
+            </div>
             <Select value={currentRole} onValueChange={onRoleChange}>
-              <SelectTrigger className="w-[180px] h-8 bg-white border-amber-300">
+              <SelectTrigger className="w-[200px] h-9 bg-white border-blue-200 hover:border-blue-300 transition-colors">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

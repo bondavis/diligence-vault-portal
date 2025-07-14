@@ -128,15 +128,34 @@ export const QuestionRenderer = ({ question, value, onChange }: QuestionRenderer
 
       case 'yes_no':
         return (
-          <div className="flex items-center space-x-3">
-            <Switch
-              id={question.id}
-              checked={value === 'Yes' || value === true}
-              onCheckedChange={(checked) => onChange(checked ? 'Yes' : 'No')}
-            />
-            <Label htmlFor={question.id} className="text-sm">
-              {value === 'Yes' || value === true ? 'Yes' : 'No'}
-            </Label>
+          <div className="space-y-3">
+            <div className="flex items-center justify-center space-x-6 p-4 bg-gray-50 rounded-lg">
+              <button
+                type="button"
+                onClick={() => onChange('No')}
+                className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                  value === 'No' 
+                    ? 'bg-red-500 text-white shadow-md' 
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                }`}
+              >
+                No
+              </button>
+              <button
+                type="button"
+                onClick={() => onChange('Yes')}
+                className={`px-6 py-2 rounded-md font-medium transition-colors ${
+                  value === 'Yes' 
+                    ? 'bg-green-500 text-white shadow-md' 
+                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                }`}
+              >
+                Yes
+              </button>
+            </div>
+            {!value && (
+              <p className="text-sm text-amber-600 text-center">Please select Yes or No</p>
+            )}
           </div>
         );
 

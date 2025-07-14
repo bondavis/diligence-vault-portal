@@ -1,6 +1,7 @@
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -9,6 +10,7 @@ import { Database } from '@/integrations/supabase/types';
 import { validateQuestionnaireResponse } from '@/utils/inputValidation';
 import { useState } from 'react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { HelpCircle, CheckCircle } from 'lucide-react';
 
 type QuestionnaireQuestion = Database['public']['Tables']['questionnaire_questions']['Row'];
 
@@ -151,23 +153,64 @@ export const QuestionRenderer = ({ question, value, onChange }: QuestionRenderer
     }
   };
 
+  const getQuestionExplanation = (questionType: string) => {
+    const explanations = {
+      'number': 'Enter a numeric value (e.g., 150, 2.5, 1000)',
+      'select': 'Choose one option from the dropdown menu',
+      'radio': 'Select one option from the choices below',
+      'checkbox': 'You can select multiple options that apply',
+      'yes_no': 'Toggle the switch to answer Yes or No',
+      'textarea': 'Provide a detailed response in the text area below'
+    };
+    return explanations[questionType] || 'Enter your response in the field below';
+  };
+
   return (
-    <div className="space-y-3">
-      <div>
-        <Label className="text-base font-medium text-gray-900">
-          {question.question_text}
-          {question.is_required && <span className="text-red-500 ml-1">*</span>}
-        </Label>
+    <div className="space-y-4">
+      <div className="space-y-3">
+        <div className="flex items-start justify-between">
+          <Label className="text-base font-semibold text-gray-900 leading-relaxed flex-1">
+            {question.question_text}
+            {question.is_required && (
+              <span className="text-red-500 ml-1 font-bold">*</span>
+            )}
+          </Label>
+          {question.responsible_party && (
+            <Badge variant="outline" className="ml-3 text-xs bg-gray-50">
+              {question.responsible_party} Team
+            </Badge>
+          )}
+        </div>
+        
         {question.help_text && (
-          <p className="text-sm text-gray-600 mt-1">{question.help_text}</p>
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-start space-x-2">
+              <HelpCircle className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-medium text-blue-900 mb-1">Context & Guidance</p>
+                <p className="text-sm text-blue-800">{question.help_text}</p>
+              </div>
+            </div>
+          </div>
         )}
+        
+        <div className="text-xs text-gray-500 bg-gray-50 rounded px-2 py-1">
+          💡 {getQuestionExplanation(question.question_type)}
+        </div>
       </div>
-      <div>
+      
+      <div className="space-y-2">
         {renderInput()}
         {validationError && (
           <Alert variant="destructive" className="mt-2">
             <AlertDescription>{validationError}</AlertDescription>
           </Alert>
+        )}
+        {value && !validationError && (
+          <div className="flex items-center space-x-1 text-xs text-green-600">
+            <CheckCircle className="h-3 w-3" />
+            <span>Answer saved</span>
+          </div>
         )}
       </div>
     </div>

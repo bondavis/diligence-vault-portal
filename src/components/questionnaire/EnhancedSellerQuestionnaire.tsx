@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ArrowLeft, ArrowRight, Save, CheckCircle, FileText, Download, BarChart3 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, ArrowRight, Save, CheckCircle, FileText, BarChart3, Clock, HelpCircle, MessageCircle, Lightbulb, Calendar } from 'lucide-react';
 import { QuestionRenderer } from './QuestionRenderer';
 import { QuestionnaireSidebar } from './QuestionnaireSidebar';
 import { QuestionnaireSummary } from './QuestionnaireSummary';
@@ -27,6 +28,9 @@ interface QuestionGroup {
   category: QuestionnaireCategory;
   questions: QuestionnaireQuestion[];
   isCompleted: boolean;
+  description?: string;
+  estimatedTime?: number;
+  icon?: string;
 }
 
 export const EnhancedSellerQuestionnaire = ({ 
@@ -140,6 +144,72 @@ export const EnhancedSellerQuestionnaire = ({
     }
   };
 
+  const getCategoryInfo = (category: string) => {
+    const categoryMap = {
+      'Business Snapshot': {
+        description: 'Core information about your business structure and operations',
+        icon: '🏢',
+        estimatedTime: 8
+      },
+      'Key Metrics': {
+        description: 'Financial and operational performance indicators',
+        icon: '📊',
+        estimatedTime: 12
+      },
+      'Service Mix': {
+        description: 'Revenue breakdown by service categories',
+        icon: '🎯',
+        estimatedTime: 15
+      },
+      'Sales': {
+        description: 'Sales processes, team structure, and customer acquisition',
+        icon: '💰',
+        estimatedTime: 10
+      },
+      'HR': {
+        description: 'Team composition, compensation, and organizational structure',
+        icon: '👥',
+        estimatedTime: 8
+      },
+      'Operational': {
+        description: 'Day-to-day operations, processes, and systems',
+        icon: '⚙️',
+        estimatedTime: 12
+      },
+      'Customer Experience': {
+        description: 'Client relationships, satisfaction, and retention strategies',
+        icon: '🤝',
+        estimatedTime: 10
+      },
+      'Marketing': {
+        description: 'Marketing strategies, channels, and brand positioning',
+        icon: '📈',
+        estimatedTime: 8
+      },
+      'Technology & Systems': {
+        description: 'Technology infrastructure, software, and digital capabilities',
+        icon: '💻',
+        estimatedTime: 10
+      },
+      'Facilities & Equipment': {
+        description: 'Physical assets, locations, and equipment inventory',
+        icon: '🏭',
+        estimatedTime: 6
+      },
+      'Compliance/Insurance/Safety': {
+        description: 'Regulatory compliance, insurance coverage, and safety protocols',
+        icon: '🛡️',
+        estimatedTime: 8
+      },
+      'Deal Specific': {
+        description: 'Transaction-specific questions and considerations',
+        icon: '📋',
+        estimatedTime: 5
+      }
+    };
+    return categoryMap[category] || { description: '', icon: '📄', estimatedTime: 5 };
+  };
+
   const createQuestionGroups = (questionsData: QuestionnaireQuestion[], responseMap: Record<string, any>): QuestionGroup[] => {
     const categoryGroups: Record<string, QuestionnaireQuestion[]> = {};
     
@@ -153,6 +223,8 @@ export const EnhancedSellerQuestionnaire = ({
     const groups: QuestionGroup[] = [];
     
     Object.entries(categoryGroups).forEach(([category, categoryQuestions]) => {
+      const categoryInfo = getCategoryInfo(category);
+      
       if (category === 'Service Mix') {
         // Service Mix stays as one group
         groups.push({
@@ -160,7 +232,10 @@ export const EnhancedSellerQuestionnaire = ({
           title: 'Service Mix Distribution',
           category: category as QuestionnaireCategory,
           questions: categoryQuestions,
-          isCompleted: categoryQuestions.every(q => responseMap[q.id] !== undefined)
+          isCompleted: categoryQuestions.every(q => responseMap[q.id] !== undefined),
+          description: categoryInfo.description,
+          estimatedTime: categoryInfo.estimatedTime,
+          icon: categoryInfo.icon
         });
       } else {
         // Split large categories into smaller groups (3-5 questions each)
@@ -180,7 +255,10 @@ export const EnhancedSellerQuestionnaire = ({
             title,
             category: category as QuestionnaireCategory,
             questions: chunk,
-            isCompleted: chunk.every(q => responseMap[q.id] !== undefined)
+            isCompleted: chunk.every(q => responseMap[q.id] !== undefined),
+            description: categoryInfo.description,
+            estimatedTime: Math.ceil(categoryInfo.estimatedTime / totalGroups),
+            icon: categoryInfo.icon
           });
         }
       }
@@ -408,14 +486,29 @@ export const EnhancedSellerQuestionnaire = ({
         {/* Main Content */}
         <div className="flex-1 p-6">
           {/* Header */}
-          <Card className="mb-6">
+          <Card className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
             <CardHeader>
               <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-2xl">Post-LOI Questionnaire</CardTitle>
-                  <p className="text-muted-foreground mt-1">
-                    {dealName && `Deal: ${dealName}`}
-                  </p>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-3">
+                    <div className="text-3xl">{currentGroup?.icon || '📋'}</div>
+                    <div>
+                      <CardTitle className="text-2xl text-blue-900">Post-LOI Questionnaire</CardTitle>
+                      <p className="text-blue-600 font-medium">
+                        {dealName && `Deal: ${dealName}`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center space-x-4 text-sm text-blue-700">
+                    <div className="flex items-center space-x-1">
+                      <Clock className="h-4 w-4" />
+                      <span>Est. {currentGroup?.estimatedTime || 5} min</span>
+                    </div>
+                    <div className="flex items-center space-x-1">
+                      <Calendar className="h-4 w-4" />
+                      <span>Auto-saved every 30 seconds</span>
+                    </div>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Button
@@ -423,6 +516,7 @@ export const EnhancedSellerQuestionnaire = ({
                     size="sm"
                     onClick={() => saveProgress()}
                     disabled={saving}
+                    className="bg-white hover:bg-blue-50 border-blue-200"
                   >
                     <Save className="h-4 w-4 mr-2" />
                     {saving ? 'Saving...' : 'Save Progress'}
@@ -431,6 +525,7 @@ export const EnhancedSellerQuestionnaire = ({
                     variant="outline"
                     size="sm"
                     onClick={() => setShowSummary(true)}
+                    className="bg-white hover:bg-blue-50 border-blue-200"
                   >
                     <BarChart3 className="h-4 w-4 mr-2" />
                     Summary
@@ -439,6 +534,7 @@ export const EnhancedSellerQuestionnaire = ({
                     <Button
                       variant="ghost"
                       onClick={onBack}
+                      className="hover:bg-blue-100"
                     >
                       <ArrowLeft className="h-4 w-4 mr-2" />
                       Back
@@ -450,38 +546,77 @@ export const EnhancedSellerQuestionnaire = ({
           </Card>
 
           {/* Progress */}
-          <Card className="mb-6">
+          <Card className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-green-200">
             <CardContent className="p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium">
-                  Section: {currentGroupIndex + 1} of {questionGroups.length}
-                </span>
-                <span className="text-sm text-muted-foreground">
-                  {overallProgress}% Complete ({answeredQuestions}/{totalQuestions} questions)
-                </span>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center space-x-3">
+                  <Badge variant="secondary" className="bg-green-100 text-green-800">
+                    Section {currentGroupIndex + 1} of {questionGroups.length}
+                  </Badge>
+                  <span className="text-sm font-medium text-green-900">
+                    {currentGroup?.title}
+                  </span>
+                </div>
+                <div className="flex items-center space-x-2 text-sm text-green-700">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>{overallProgress}% Complete ({answeredQuestions}/{totalQuestions} questions)</span>
+                </div>
               </div>
-              <Progress value={overallProgress} className="h-2" />
+              <Progress value={overallProgress} className="h-3 bg-green-100" />
+              <div className="mt-2 text-xs text-green-600">
+                {currentGroup?.description}
+              </div>
             </CardContent>
           </Card>
 
           {/* Questions */}
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-lg">{currentGroup.title}</CardTitle>
+          <Card className="mb-6 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-slate-50 to-gray-50 border-b">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="text-2xl">{currentGroup.icon}</div>
+                  <div>
+                    <CardTitle className="text-xl text-gray-900">{currentGroup.title}</CardTitle>
+                    <p className="text-sm text-gray-600 mt-1">{currentGroup.description}</p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Badge variant="outline" className="text-xs">
+                    {currentGroup.questions.length} question{currentGroup.questions.length !== 1 ? 's' : ''}
+                  </Badge>
+                  <Badge variant="outline" className="text-xs">
+                    ~{currentGroup.estimatedTime} min
+                  </Badge>
+                </div>
+              </div>
               {currentGroup.category === 'Service Mix' && (
-                <p className="text-sm text-muted-foreground">
-                  Please provide the percentage breakdown for your service mix. All percentages should total 100%.
-                </p>
+                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <Lightbulb className="h-4 w-4 text-blue-600" />
+                    <p className="text-sm text-blue-800 font-medium">Service Mix Guidelines</p>
+                  </div>
+                  <p className="text-sm text-blue-700 mt-1">
+                    Please provide the percentage breakdown for your service mix. All percentages should total 100%. 
+                    Consider your revenue streams from the past 12 months for accuracy.
+                  </p>
+                </div>
               )}
             </CardHeader>
-            <CardContent className="space-y-8">
+            <CardContent className="space-y-8 p-6">
               {currentGroup.questions.map((question, index) => (
-                <div key={question.id} className={index > 0 ? 'border-t pt-6' : ''}>
-                  <QuestionRenderer
-                    question={question}
-                    value={responses[question.id]}
-                    onChange={(value) => handleResponseChange(question.id, value)}
-                  />
+                <div key={question.id} className={`${index > 0 ? 'border-t pt-8' : ''} transition-all duration-200`}>
+                  <div className="flex items-start space-x-3 mb-4">
+                    <Badge variant="secondary" className="mt-1 text-xs font-medium">
+                      {index + 1}/{currentGroup.questions.length}
+                    </Badge>
+                    <div className="flex-1">
+                      <QuestionRenderer
+                        question={question}
+                        value={responses[question.id]}
+                        onChange={(value) => handleResponseChange(question.id, value)}
+                      />
+                    </div>
+                  </div>
                 </div>
               ))}
             </CardContent>

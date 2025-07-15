@@ -246,7 +246,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
               categoryProgress={categoryProgress}
               onBack={onBack}
               onCategoryClick={(category) => {
-                setActiveFilters({ category: category as RequestCategory, status: 'pending' });
+                setActiveFilters({ category: category as RequestCategory });
                 setShowFilters(true);
               }}
             />

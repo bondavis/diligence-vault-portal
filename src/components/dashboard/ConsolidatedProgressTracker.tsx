@@ -32,6 +32,7 @@ interface ConsolidatedProgressTrackerProps {
   overallCompletionPercentage: number;
   categoryProgress: CategoryProgress[];
   onBack: () => void;
+  onCategoryClick: (category: string) => void;
 }
 
 const timelineStages = [
@@ -87,7 +88,8 @@ export const ConsolidatedProgressTracker = ({
   deal, 
   overallCompletionPercentage, 
   categoryProgress, 
-  onBack 
+  onBack,
+  onCategoryClick
 }: ConsolidatedProgressTrackerProps) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const currentStage = 2; // Stage 2 - Complete Diligence
@@ -289,11 +291,13 @@ export const ConsolidatedProgressTracker = ({
               const categoryStyle = categoryIcons[category.category as keyof typeof categoryIcons] || categoryIcons['Other'];
               
               return (
-                <div 
-                  key={category.category} 
+                <button
+                  key={category.category}
+                  onClick={() => onCategoryClick(category.category)}
                   className={cn(
-                    "p-4 rounded-lg border transition-all duration-200 hover:shadow-md",
-                    categoryStyle.color
+                    "w-full p-4 rounded-lg border transition-all duration-200 hover:shadow-md hover:scale-105 cursor-pointer text-left",
+                    categoryStyle.color,
+                    "hover:ring-2 hover:ring-primary/20"
                   )}
                 >
                   <div className="flex items-center justify-between mb-2">
@@ -318,8 +322,11 @@ export const ConsolidatedProgressTracker = ({
                         style={{ width: `${category.percentage}%` }}
                       />
                     </div>
+                    <div className="text-xs text-muted-foreground mt-1 opacity-75">
+                      Click to filter pending items
+                    </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

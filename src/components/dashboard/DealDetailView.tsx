@@ -244,7 +244,11 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
               deal={deal} 
               overallCompletionPercentage={overallCompletionPercentage} 
               categoryProgress={categoryProgress}
-              onBack={onBack} 
+              onBack={onBack}
+              onCategoryClick={(category) => {
+                setActiveFilters({ category: category as RequestCategory, status: 'pending' });
+                setShowFilters(true);
+              }}
             />
           </DashboardErrorBoundary>
 

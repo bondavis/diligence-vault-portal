@@ -53,7 +53,7 @@ export const QuestionnaireSidebar = ({
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">Sections</CardTitle>
         </CardHeader>
-        <CardContent className="space-y-3">
+        <CardContent className="space-y-3 max-h-96 overflow-y-auto scrollbar-thin scrollbar-thumb-muted-foreground/20 scrollbar-track-transparent">
           {groups.map((group, index) => (
             <div
               key={group.id}

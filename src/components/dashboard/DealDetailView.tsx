@@ -1,8 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { RequestDetailModal } from './RequestDetailModal';
-import { TimelineProjectCard } from './TimelineProjectCard';
-import { DealProgressCard } from './DealProgressCard';
+import { ConsolidatedProgressTracker } from './ConsolidatedProgressTracker';
 import { DealActions } from './DealActions';
 import { RequestsList } from './RequestsList';
 import { QuestionnaireCard } from './QuestionnaireCard';
@@ -241,15 +240,12 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
         {/* Main Content */}
         <div className="lg:col-span-2 space-y-6">
           <DashboardErrorBoundary>
-            <TimelineProjectCard 
+            <ConsolidatedProgressTracker 
               deal={deal} 
               overallCompletionPercentage={overallCompletionPercentage} 
+              categoryProgress={categoryProgress}
               onBack={onBack} 
             />
-          </DashboardErrorBoundary>
-
-          <DashboardErrorBoundary>
-            <DealProgressCard categoryProgress={categoryProgress} />
           </DashboardErrorBoundary>
 
           <DashboardErrorBoundary>

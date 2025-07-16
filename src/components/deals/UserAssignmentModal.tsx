@@ -226,26 +226,11 @@ export const UserAssignmentModal = ({ dealId, dealName, onAssignmentComplete, tr
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
-      // Create user in auth system first
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: validatedEmail.sanitized,
-        password: crypto.randomUUID().substring(0, 12) + "A1!", // Generate temporary password
-        email_confirm: true,
-        user_metadata: {
-          name: validatedName.sanitized,
-          role: values.role,
-          organization: validatedOrganization?.sanitized || null
-        }
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Failed to create user');
-
-      // Create user profile with the same ID as the auth user
+      // Create user profile
       const { data: newProfile, error: profileError } = await supabase
         .from('profiles')
         .insert({
-          id: authData.user.id, // Use the auth user's ID
+          id: crypto.randomUUID(), // Generate ID for the profile
           name: validatedName.sanitized,
           email: validatedEmail.sanitized,
           role: values.role,

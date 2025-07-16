@@ -63,18 +63,24 @@ export const useAuth = () => {
               
               console.log('Profile fetch result:', { profileData, error });
               
-              if (error && error.code !== 'PGRST116') {
+              if (error) {
                 console.error('Error fetching profile:', error);
-                // Security fix: Default to most restrictive role when profile unavailable
-                const restrictedProfile: Profile = {
-                  id: session.user.id,
-                  email: session.user.email || '',
-                  name: session.user.email?.split('@')[0] || 'User',
-                  role: 'seller', // Default to most restrictive role for security
-                  created_at: new Date().toISOString(),
-                };
-                console.log('Setting restricted profile:', restrictedProfile);
-                setProfile(restrictedProfile);
+                if (error.code === 'PGRST116') {
+                  // No profile found - user needs to complete registration
+                  console.log('No profile found for user, clearing profile state');
+                  setProfile(null);
+                } else {
+                  // Other database error - set restricted profile for security
+                  const restrictedProfile: Profile = {
+                    id: session.user.id,
+                    email: session.user.email || '',
+                    name: session.user.email?.split('@')[0] || 'User',
+                    role: 'seller', // Default to most restrictive role for security
+                    created_at: new Date().toISOString(),
+                  };
+                  console.log('Setting restricted profile due to error:', restrictedProfile);
+                  setProfile(restrictedProfile);
+                }
               } else if (profileData) {
                 // Type cast the profile data to ensure it matches our interface
                 const typedProfile: Profile = {

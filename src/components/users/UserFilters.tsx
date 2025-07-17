@@ -9,6 +9,8 @@ interface UserFiltersProps {
   onRoleFilterChange: (value: string) => void;
   orgFilter: string;
   onOrgFilterChange: (value: string) => void;
+  statusFilter: string;
+  onStatusFilterChange: (value: string) => void;
 }
 
 export const UserFilters = ({
@@ -17,7 +19,9 @@ export const UserFilters = ({
   roleFilter,
   onRoleFilterChange,
   orgFilter,
-  onOrgFilterChange
+  onOrgFilterChange,
+  statusFilter,
+  onStatusFilterChange
 }: UserFiltersProps) => {
   return (
     <div className="flex space-x-4">
@@ -29,6 +33,17 @@ export const UserFilters = ({
           className="max-w-sm"
         />
       </div>
+      <Select value={statusFilter} onValueChange={onStatusFilterChange}>
+        <SelectTrigger className="w-32">
+          <SelectValue placeholder="Status" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">All Statuses</SelectItem>
+          <SelectItem value="active">Active</SelectItem>
+          <SelectItem value="pending">Pending</SelectItem>
+          <SelectItem value="inactive">Inactive</SelectItem>
+        </SelectContent>
+      </Select>
       <Select value={orgFilter} onValueChange={onOrgFilterChange}>
         <SelectTrigger className="w-40">
           <SelectValue placeholder="Filter by org" />

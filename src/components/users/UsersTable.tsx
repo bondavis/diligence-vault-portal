@@ -20,9 +20,10 @@ interface UsersTableProps {
   users: UserWithDeal[];
   onEditUser: (user: UserWithDeal) => void;
   onRemoveUser: (user: UserWithDeal) => void;
+  onReactivateUser: (user: UserWithDeal) => void;
 }
 
-export const UsersTable = ({ users, onEditUser, onRemoveUser }: UsersTableProps) => {
+export const UsersTable = ({ users, onEditUser, onRemoveUser, onReactivateUser }: UsersTableProps) => {
   return (
     <div className="rounded-md border">
       <Table>
@@ -94,7 +95,15 @@ export const UsersTable = ({ users, onEditUser, onRemoveUser }: UsersTableProps)
                 <TableCell>
                   <div className="flex space-x-2">
                     <Button variant="outline" size="sm" onClick={() => onEditUser(user)}>Edit</Button>
-                    <Button variant="outline" size="sm" onClick={() => onRemoveUser(user)}>Remove</Button>
+                    {user.invitation_status === 'inactive' ? (
+                      <Button variant="outline" size="sm" onClick={() => onReactivateUser(user)} className="text-green-600 hover:text-green-700">
+                        Reactivate
+                      </Button>
+                    ) : (
+                      <Button variant="outline" size="sm" onClick={() => onRemoveUser(user)} className="text-red-600 hover:text-red-700">
+                        Deactivate
+                      </Button>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

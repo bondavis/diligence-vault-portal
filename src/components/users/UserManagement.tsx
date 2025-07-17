@@ -25,6 +25,7 @@ export const UserManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [orgFilter, setOrgFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('active'); // Default to show only active users
   const [users, setUsers] = useState<UserWithDeal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [editingUser, setEditingUser] = useState<UserWithDeal | null>(null);
@@ -100,29 +101,60 @@ export const UserManagement = () => {
   };
 
   const handleRemoveUser = async (user: UserWithDeal) => {
-    if (!confirm(`Are you sure you want to remove ${user.name}? This will deactivate their account.`)) {
+    if (!confirm(`Are you sure you want to deactivate ${user.name}? They will lose access to the portal.`)) {
       return;
     }
 
     try {
       const { error } = await supabase
         .from('profiles')
-        .update({ invitation_status: 'inactive' })
+        .update({ 
+          invitation_status: 'inactive',
+          last_active: new Date().toISOString()
+        })
         .eq('id', user.id);
 
       if (error) throw error;
 
       toast({
-        title: "User Removed",
-        description: `${user.name} has been deactivated.`,
+        title: "User Deactivated",
+        description: `${user.name} has been deactivated and will no longer have access.`,
       });
 
       loadUsers(); // Refresh the list
     } catch (error) {
-      console.error('Error removing user:', error);
+      console.error('Error deactivating user:', error);
       toast({
         title: "Error",
-        description: "Failed to remove user. Please try again.",
+        description: "Failed to deactivate user. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleReactivateUser = async (user: UserWithDeal) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ 
+          invitation_status: 'active',
+          last_active: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "User Reactivated",
+        description: `${user.name} has been reactivated and can access the portal again.`,
+      });
+
+      loadUsers(); // Refresh the list
+    } catch (error) {
+      console.error('Error reactivating user:', error);
+      toast({
+        title: "Error",
+        description: "Failed to reactivate user. Please try again.",
         variant: "destructive",
       });
     }
@@ -133,7 +165,11 @@ export const UserManagement = () => {
                          user.email.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesRole = roleFilter === 'all' || user.role === roleFilter;
     const matchesOrg = orgFilter === 'all' || user.organization === orgFilter;
-    return matchesSearch && matchesRole && matchesOrg;
+    const matchesStatus = statusFilter === 'all' || 
+                         (statusFilter === 'active' && user.invitation_status === 'active') ||
+                         (statusFilter === 'inactive' && user.invitation_status === 'inactive') ||
+                         (statusFilter === 'pending' && user.invitation_status === 'pending');
+    return matchesSearch && matchesRole && matchesOrg && matchesStatus;
   });
 
   return (
@@ -156,6 +192,8 @@ export const UserManagement = () => {
             onRoleFilterChange={setRoleFilter}
             orgFilter={orgFilter}
             onOrgFilterChange={setOrgFilter}
+            statusFilter={statusFilter}
+            onStatusFilterChange={setStatusFilter}
           />
 
           {isLoading ? (
@@ -169,6 +207,7 @@ export const UserManagement = () => {
                 users={filteredUsers} 
                 onEditUser={handleEditUser}
                 onRemoveUser={handleRemoveUser}
+                onReactivateUser={handleReactivateUser}
               />
 
               {filteredUsers.length === 0 && (

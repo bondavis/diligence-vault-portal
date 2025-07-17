@@ -3,14 +3,17 @@ import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Progress } from '@/components/ui/progress';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
-import { Upload, Eye, Trash2, CheckCircle, Clock, AlertTriangle, Calendar, Info } from 'lucide-react';
+import { Upload, Eye, Trash2, CheckCircle, Clock, AlertTriangle, Calendar, Info, MessageSquare } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'] & {
   document_count?: number;
   has_response?: boolean;
   computed_status?: string;
+  comment_count?: number;
+  latest_comment?: string;
 };
 
 type RequestPriority = Database['public']['Enums']['request_priority'];
@@ -152,11 +155,47 @@ export const EnhancedRequestCard = ({
   onDeleteRequest 
 }: EnhancedRequestCardProps) => {
   const [isHovered, setIsHovered] = useState(false);
+  const [commentCount, setCommentCount] = useState(request.comment_count || 0);
+  const [latestComment, setLatestComment] = useState(request.latest_comment || '');
+  
   const isCompleted = request.computed_status === 'Accepted';
   const progress = calculateProgress(request);
   const daysRemaining = getDaysRemaining(request.due_date);
   const isOverdue = daysRemaining !== null && daysRemaining < 0;
   const period = formatPeriod(request);
+
+  useEffect(() => {
+    const fetchCommentCount = async () => {
+      try {
+        const { count } = await supabase
+          .from('request_comments')
+          .select('*', { count: 'exact', head: true })
+          .eq('request_id', request.id);
+        
+        if (count !== null) {
+          setCommentCount(count);
+        }
+
+        if (count && count > 0) {
+          const { data: latestCommentData } = await supabase
+            .from('request_comments')
+            .select('comment_text')
+            .eq('request_id', request.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+          
+          if (latestCommentData) {
+            setLatestComment(latestCommentData.comment_text);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching comments:', error);
+      }
+    };
+
+    fetchCommentCount();
+  }, [request.id]);
 
   return (
     <TooltipProvider>
@@ -252,6 +291,20 @@ export const EnhancedRequestCard = ({
                 <div className="flex items-center space-x-2">
                   {getCategoryBadge(request.category)}
                   {getStatusBadge(request.computed_status || 'Incomplete')}
+                  {commentCount > 0 && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge className="bg-amber-100 text-amber-800 border-amber-200 font-medium px-2 py-1 cursor-help">
+                          <MessageSquare className="h-3 w-3 mr-1" />
+                          {commentCount} Comment{commentCount !== 1 ? 's' : ''}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm p-3">
+                        <p className="text-sm font-medium text-amber-800 mb-1">Latest BBT Feedback:</p>
+                        <p className="text-sm italic text-amber-700">"{latestComment.slice(0, 100)}{latestComment.length > 100 ? '...' : ''}"</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
                 
                 <div className="flex items-center space-x-2">

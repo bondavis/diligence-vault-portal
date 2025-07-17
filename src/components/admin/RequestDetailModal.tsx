@@ -15,7 +15,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { FileUploadZone } from '../upload/FileUploadZone';
 import { DocumentList } from './DocumentList';
-import { User, Calendar, FileText, Send } from 'lucide-react';
+import { User, Calendar, FileText, Send, MessageSquare, Plus } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 
 interface RequestDetailModalProps {
   open: boolean;
@@ -37,7 +38,11 @@ export const RequestDetailModal = ({
   const [textResponse, setTextResponse] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
+  const [submittingComment, setSubmittingComment] = useState(false);
   const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (open && requestId) {
@@ -92,10 +97,23 @@ export const RequestDetailModal = ({
 
       if (documentsError) throw documentsError;
 
+      // Load comments with author info
+      const { data: commentsData, error: commentsError } = await supabase
+        .from('request_comments')
+        .select(`
+          *,
+          profiles!inner(name, email)
+        `)
+        .eq('request_id', requestId)
+        .order('created_at', { ascending: false });
+
+      if (commentsError) throw commentsError;
+
       setRequest(requestData);
       setAssignedUser(assignedUserData);
       setResponse(responseData);
       setDocuments(documentsData || []);
+      setComments(commentsData || []);
       setTextResponse(responseData?.text_response || '');
     } catch (error) {
       console.error('Error loading request details:', error);
@@ -249,6 +267,46 @@ export const RequestDetailModal = ({
     }
   };
 
+  const handleCommentSubmit = async () => {
+    if (!requestId || !newComment.trim() || !user) return;
+
+    try {
+      setSubmittingComment(true);
+      
+      const { error } = await supabase
+        .from('request_comments')
+        .insert({
+          request_id: requestId,
+          user_id: user.id,
+          comment_text: newComment.trim()
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Comment added",
+        description: "Your feedback has been posted",
+      });
+
+      setNewComment('');
+      loadRequestDetails();
+      if (onRequestUpdate) {
+        onRequestUpdate();
+      }
+    } catch (error) {
+      console.error('Error posting comment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to post comment",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmittingComment(false);
+    }
+  };
+
+  const canComment = user && (user.role === 'admin' || user.role === 'bbt_execution_team');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -353,6 +411,60 @@ export const RequestDetailModal = ({
                 </CardContent>
               </Card>
             )}
+
+            {/* BBT Comments Section */}
+            <Card>
+              <CardContent className="p-6">
+                <h3 className="font-medium text-lg mb-4 flex items-center">
+                  <MessageSquare className="h-5 w-5 mr-2" />
+                  BBT Team Feedback
+                </h3>
+                
+                {/* Add Comment (BBT Team Only) */}
+                {canComment && (
+                  <div className="space-y-4 mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <Textarea
+                      placeholder="Add feedback for the seller (e.g., 'You only uploaded 2024, but we still need YTD 2025 reports')"
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      className="min-h-[80px] resize-none border-amber-200 focus:border-amber-400"
+                    />
+                    <Button 
+                      onClick={handleCommentSubmit}
+                      disabled={submittingComment || !newComment.trim()}
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Feedback
+                    </Button>
+                  </div>
+                )}
+
+                {/* Comments List */}
+                <div className="space-y-4">
+                  {comments.length > 0 ? (
+                    comments.map((comment) => (
+                      <div key={comment.id} className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="font-medium text-amber-800">
+                            {comment.profiles?.name || 'BBT Team'}
+                          </div>
+                          <div className="text-sm text-amber-600">
+                            {new Date(comment.created_at).toLocaleString()}
+                          </div>
+                        </div>
+                        <p className="text-amber-700 leading-relaxed italic">
+                          "{comment.comment_text}"
+                        </p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-gray-500 italic">No feedback yet</p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Due Date and Timestamps */}
             <div className="text-sm text-gray-500 pt-4 border-t space-y-1">

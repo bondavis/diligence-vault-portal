@@ -359,10 +359,9 @@ export const RequestDetailModal = ({
               </div>
             )}
 
-            {/* BBT Comments Section - Moved up for visibility */}
-            {canComment && (
-              <Card>
-                <CardContent className="p-6">
+            {/* BBT Comments Section - Always visible */}
+            <Card>
+              <CardContent className="p-6">
                   <h3 className="font-medium text-lg mb-4 flex items-center">
                     <MessageSquare className="h-5 w-5 mr-2" />
                     BBT Team Feedback
@@ -411,7 +410,6 @@ export const RequestDetailModal = ({
                   </div>
                 </CardContent>
               </Card>
-            )}
 
             {/* Upload Zone - Always Visible */}
             {request.allow_file_upload && (

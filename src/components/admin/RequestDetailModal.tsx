@@ -42,7 +42,7 @@ export const RequestDetailModal = ({
   const [newComment, setNewComment] = useState('');
   const [submittingComment, setSubmittingComment] = useState(false);
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   useEffect(() => {
     if (open && requestId) {
@@ -305,7 +305,7 @@ export const RequestDetailModal = ({
     }
   };
 
-  const canComment = user && (user.role === 'admin' || user.role === 'bbt_execution_team');
+  const canComment = profile && (profile.role === 'admin' || profile.role === 'bbt_execution_team');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

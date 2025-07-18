@@ -268,7 +268,7 @@ export const RequestDetailModal = ({
   };
 
   const handleCommentSubmit = async () => {
-    if (!requestId || !newComment.trim() || !user) return;
+    if (!requestId || !newComment.trim() || !user?.id) return;
 
     try {
       setSubmittingComment(true);
@@ -306,6 +306,7 @@ export const RequestDetailModal = ({
   };
 
   const canComment = profile && (profile.role === 'admin' || profile.role === 'bbt_execution_team');
+  console.log('BBT Comment check:', { profile: !!profile, role: profile?.role, canComment });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

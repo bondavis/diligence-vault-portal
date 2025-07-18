@@ -359,6 +359,60 @@ export const RequestDetailModal = ({
               </div>
             )}
 
+            {/* BBT Comments Section - Moved up for visibility */}
+            {canComment && (
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-medium text-lg mb-4 flex items-center">
+                    <MessageSquare className="h-5 w-5 mr-2" />
+                    BBT Team Feedback
+                  </h3>
+                  
+                  {/* Add Comment (BBT Team Only) */}
+                  <div className="space-y-4 mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <Textarea
+                      placeholder="Add feedback for the seller (e.g., 'You only uploaded 2024, but we still need YTD 2025 reports')"
+                      value={newComment}
+                      onChange={(e) => setNewComment(e.target.value)}
+                      className="min-h-[80px] resize-none border-amber-200 focus:border-amber-400"
+                    />
+                    <Button 
+                      onClick={handleCommentSubmit}
+                      disabled={submittingComment || !newComment.trim()}
+                      className="bg-amber-600 hover:bg-amber-700 text-white"
+                      size="sm"
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Feedback
+                    </Button>
+                  </div>
+
+                  {/* Comments List */}
+                  <div className="space-y-4">
+                    {comments.length > 0 ? (
+                      comments.map((comment) => (
+                        <div key={comment.id} className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="font-medium text-amber-800">
+                              {comment.profiles?.name || 'BBT Team'}
+                            </div>
+                            <div className="text-sm text-amber-600">
+                              {new Date(comment.created_at).toLocaleString()}
+                            </div>
+                          </div>
+                          <p className="text-amber-700 leading-relaxed italic">
+                            "{comment.comment_text}"
+                          </p>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-gray-500 italic">No feedback yet</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Upload Zone - Always Visible */}
             {request.allow_file_upload && (
               <Card>
@@ -412,60 +466,6 @@ export const RequestDetailModal = ({
                 </CardContent>
               </Card>
             )}
-
-            {/* BBT Comments Section */}
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="font-medium text-lg mb-4 flex items-center">
-                  <MessageSquare className="h-5 w-5 mr-2" />
-                  BBT Team Feedback
-                </h3>
-                
-                {/* Add Comment (BBT Team Only) */}
-                {canComment && (
-                  <div className="space-y-4 mb-6 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <Textarea
-                      placeholder="Add feedback for the seller (e.g., 'You only uploaded 2024, but we still need YTD 2025 reports')"
-                      value={newComment}
-                      onChange={(e) => setNewComment(e.target.value)}
-                      className="min-h-[80px] resize-none border-amber-200 focus:border-amber-400"
-                    />
-                    <Button 
-                      onClick={handleCommentSubmit}
-                      disabled={submittingComment || !newComment.trim()}
-                      className="bg-amber-600 hover:bg-amber-700 text-white"
-                      size="sm"
-                    >
-                      <Plus className="h-4 w-4 mr-1" />
-                      Add Feedback
-                    </Button>
-                  </div>
-                )}
-
-                {/* Comments List */}
-                <div className="space-y-4">
-                  {comments.length > 0 ? (
-                    comments.map((comment) => (
-                      <div key={comment.id} className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="font-medium text-amber-800">
-                            {comment.profiles?.name || 'BBT Team'}
-                          </div>
-                          <div className="text-sm text-amber-600">
-                            {new Date(comment.created_at).toLocaleString()}
-                          </div>
-                        </div>
-                        <p className="text-amber-700 leading-relaxed italic">
-                          "{comment.comment_text}"
-                        </p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 italic">No feedback yet</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
 
             {/* Due Date and Timestamps */}
             <div className="text-sm text-gray-500 pt-4 border-t space-y-1">

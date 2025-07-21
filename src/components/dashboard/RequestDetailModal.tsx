@@ -212,7 +212,8 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
       if (error) throw error;
 
       setNewComment('');
-      loadRequestData(); // Reload to show new comment
+      loadRequestData(); // Reload to show new comment  
+      onUpdate?.(); // Notify parent to refresh
       toast({
         title: "Success",
         description: "Comment added successfully",

@@ -1,13 +1,17 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Upload, Eye, Trash2, CheckCircle } from 'lucide-react';
+import { Upload, Eye, Trash2, CheckCircle, MessageSquare } from 'lucide-react';
 import { Database } from '@/integrations/supabase/types';
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 
 type DiligenceRequest = Database['public']['Tables']['diligence_requests']['Row'] & {
   document_count?: number;
   has_response?: boolean;
   computed_status?: string;
+  comment_count?: number;
+  latest_comment?: string;
 };
 
 type RequestPriority = Database['public']['Enums']['request_priority'];
@@ -61,7 +65,27 @@ export const RequestCard = ({
   onRequestClick, 
   onDeleteRequest 
 }: RequestCardProps) => {
+  const [commentCount, setCommentCount] = useState(request.comment_count || 0);
   const isUploaded = request.computed_status === 'Accepted';
+
+  useEffect(() => {
+    const fetchCommentCount = async () => {
+      try {
+        const { count } = await supabase
+          .from('request_comments')
+          .select('*', { count: 'exact', head: true })
+          .eq('request_id', request.id);
+        
+        if (count !== null) {
+          setCommentCount(count);
+        }
+      } catch (error) {
+        console.error('Error fetching comments:', error);
+      }
+    };
+
+    fetchCommentCount();
+  }, [request.id]);
 
   return (
     <div 
@@ -116,6 +140,12 @@ export const RequestCard = ({
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
                 {getCategoryBadge(request.category)}
+                {commentCount > 0 && (
+                  <Badge className="bg-amber-100 text-amber-800 border-amber-200 font-medium px-2 py-1">
+                    <MessageSquare className="h-3 w-3 mr-1" />
+                    {commentCount} BBT Comment{commentCount !== 1 ? 's' : ''}
+                  </Badge>
+                )}
               </div>
               
               {!isUploaded && (

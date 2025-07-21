@@ -7,9 +7,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileText, Calendar, AlertCircle, CheckCircle, Clock, Send } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { FileText, Calendar, AlertCircle, CheckCircle, Clock, Send, MessageSquare } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { EnhancedFileUploadZone } from '../upload/EnhancedFileUploadZone';
 import { EmployeeCensusSpreadsheet } from '../requests/EmployeeCensusSpreadsheet';
 import { Database } from '@/integrations/supabase/types';
@@ -31,6 +33,8 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
+  const [comments, setComments] = useState<any[]>([]);
+  const [newComment, setNewComment] = useState('');
   const [editData, setEditData] = useState<{
     title?: string;
     description?: string | null;
@@ -39,6 +43,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
     period_text?: string | null;
   }>({});
   const { toast } = useToast();
+  const { profile } = useAuth();
 
   useEffect(() => {
     if (request && isOpen) {
@@ -75,6 +80,18 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
         .eq('request_id', request.id);
 
       setDocuments(docsData || []);
+
+      // Load comments
+      const { data: commentsData } = await supabase
+        .from('request_comments')
+        .select(`
+          *,
+          profiles!user_id (name, role)
+        `)
+        .eq('request_id', request.id)
+        .order('created_at', { ascending: true });
+
+      setComments(commentsData || []);
     } catch (error) {
       console.error('Error loading request data:', error);
     }
@@ -177,6 +194,39 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
   const handleUploadComplete = () => {
     loadRequestData();
     onUpdate?.();
+  };
+
+  const handleCommentSubmit = async () => {
+    if (!request || !newComment.trim() || !profile) return;
+
+    try {
+      setLoading(true);
+      const { error } = await supabase
+        .from('request_comments')
+        .insert({
+          request_id: request.id,
+          user_id: profile.id,
+          comment_text: newComment.trim()
+        });
+
+      if (error) throw error;
+
+      setNewComment('');
+      loadRequestData(); // Reload to show new comment
+      toast({
+        title: "Success",
+        description: "Comment added successfully",
+      });
+    } catch (error) {
+      console.error('Error adding comment:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add comment",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const getPriorityBadge = (priority: RequestPriority) => {
@@ -372,6 +422,58 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
               </div>
             </div>
           )}
+
+          {/* BBT Team Feedback Section */}
+          <Card>
+            <CardContent className="p-6">
+              <h3 className="font-medium text-lg mb-4 flex items-center">
+                <MessageSquare className="h-5 w-5 mr-2" />
+                BBT Team Feedback
+              </h3>
+              
+              {/* Comments List */}
+              <div className="space-y-3 mb-4 max-h-40 overflow-y-auto">
+                {comments.length === 0 ? (
+                  <p className="text-sm text-gray-500 italic">No comments yet</p>
+                ) : (
+                  comments.map((comment) => (
+                    <div key={comment.id} className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex justify-between items-start mb-2">
+                        <span className="font-medium text-sm">{comment.profiles?.name || 'Unknown User'}</span>
+                        <span className="text-xs text-gray-500">
+                          {new Date(comment.created_at).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-700">{comment.comment_text}</p>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Add Comment (BBT Team Only) */}
+              {profile?.role === 'bbt_execution_team' && (
+                <div className="space-y-3">
+                  <Textarea
+                    placeholder="Add feedback or comments for the deal team..."
+                    value={newComment}
+                    onChange={(e) => setNewComment(e.target.value)}
+                    rows={3}
+                    className="bg-amber-50 border-amber-200 focus:border-amber-400"
+                  />
+                  <div className="flex justify-end">
+                    <Button 
+                      onClick={handleCommentSubmit}
+                      disabled={loading || !newComment.trim()}
+                      size="sm"
+                      className="bg-amber-600 hover:bg-amber-700"
+                    >
+                      Add Comment
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Admin Controls */}
           {isAdmin && !editMode && (

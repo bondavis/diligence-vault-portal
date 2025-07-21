@@ -86,7 +86,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
         .from('request_comments')
         .select(`
           *,
-          profiles!user_id (name, role)
+          profiles (name, role)
         `)
         .eq('request_id', request.id)
         .order('created_at', { ascending: true });

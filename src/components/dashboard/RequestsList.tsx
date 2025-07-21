@@ -113,7 +113,7 @@ export const RequestsList = ({
         description: "Request deleted successfully",
       });
 
-      onRequestsUpdated();
+      // Remove from local state instead of reloading all
       setRequestToDelete(null);
     } catch (error) {
       console.error('Error deleting request:', error);

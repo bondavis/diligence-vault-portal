@@ -141,7 +141,13 @@ export const RequestCard = ({
               <div className="flex items-center space-x-2">
                 {getCategoryBadge(request.category)}
                 {commentCount > 0 && (
-                  <Badge className="bg-amber-100 text-amber-800 border-amber-200 font-medium px-2 py-1">
+                  <Badge 
+                    className="bg-amber-100 text-amber-800 border-amber-200 font-medium px-2 py-1 cursor-pointer hover:bg-amber-200 transition-colors"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRequestClick(request);
+                    }}
+                  >
                     <MessageSquare className="h-3 w-3 mr-1" />
                     {commentCount} BBT Comment{commentCount !== 1 ? 's' : ''}
                   </Badge>

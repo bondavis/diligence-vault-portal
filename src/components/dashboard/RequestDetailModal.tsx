@@ -85,8 +85,11 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
       const { data: commentsData } = await supabase
         .from('request_comments')
         .select(`
-          *,
-          profiles (name, role)
+          id,
+          comment_text,
+          created_at,
+          user_id,
+          profiles!request_comments_user_id_fkey (name, role)
         `)
         .eq('request_id', request.id)
         .order('created_at', { ascending: true });

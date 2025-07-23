@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -28,12 +27,23 @@ interface RequestDetailModalProps {
   isAdmin?: boolean;
 }
 
+interface CommentWithProfile {
+  id: string;
+  comment_text: string;
+  created_at: string;
+  user_id: string;
+  profiles?: {
+    name: string;
+    role: string;
+  };
+}
+
 export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin = false }: RequestDetailModalProps) => {
   const [textResponse, setTextResponse] = useState('');
   const [documents, setDocuments] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [editMode, setEditMode] = useState(false);
-  const [comments, setComments] = useState<any[]>([]);
+  const [comments, setComments] = useState<CommentWithProfile[]>([]);
   const [newComment, setNewComment] = useState('');
   const [editData, setEditData] = useState<{
     title?: string;
@@ -81,22 +91,41 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
 
       setDocuments(docsData || []);
 
-      // Load comments with profiles using proper join syntax
+      // Load comments first
       const { data: commentsData } = await supabase
         .from('request_comments')
-        .select(`
-          id,
-          comment_text,
-          created_at,
-          user_id,
-          profiles:user_id(name, role)
-        `)
+        .select('id, comment_text, created_at, user_id')
         .eq('request_id', request.id)
         .order('created_at', { ascending: true });
 
-      setComments(commentsData || []);
+      if (commentsData && commentsData.length > 0) {
+        // Get unique user IDs from comments
+        const userIds = [...new Set(commentsData.map(comment => comment.user_id))];
+        
+        // Load profiles for these users
+        const { data: profilesData } = await supabase
+          .from('profiles')
+          .select('id, name, role')
+          .in('id', userIds);
+
+        // Create a map of user_id to profile
+        const profilesMap = new Map(
+          (profilesData || []).map(profile => [profile.id, profile])
+        );
+
+        // Combine comments with profiles
+        const commentsWithProfiles: CommentWithProfile[] = commentsData.map(comment => ({
+          ...comment,
+          profiles: profilesMap.get(comment.user_id) || undefined
+        }));
+
+        setComments(commentsWithProfiles);
+      } else {
+        setComments([]);
+      }
     } catch (error) {
       console.error('Error loading request data:', error);
+      setComments([]);
     }
   };
 

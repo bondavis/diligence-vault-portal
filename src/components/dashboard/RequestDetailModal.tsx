@@ -81,7 +81,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
 
       setDocuments(docsData || []);
 
-      // Load comments
+      // Load comments with profiles using proper join syntax
       const { data: commentsData } = await supabase
         .from('request_comments')
         .select(`
@@ -89,7 +89,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
           comment_text,
           created_at,
           user_id,
-          profiles!request_comments_user_id_fkey (name, role)
+          profiles:user_id(name, role)
         `)
         .eq('request_id', request.id)
         .order('created_at', { ascending: true });
@@ -443,7 +443,7 @@ export const RequestDetailModal = ({ request, isOpen, onClose, onUpdate, isAdmin
                   comments.map((comment) => (
                     <div key={comment.id} className="bg-gray-50 rounded-lg p-3">
                       <div className="flex justify-between items-start mb-2">
-                        <span className="font-medium text-sm">{comment.profiles?.name || 'Unknown User'}</span>
+                        <span className="font-medium text-sm">{comment.profiles?.name || 'BBT Team'}</span>
                         <span className="text-xs text-gray-500">
                           {new Date(comment.created_at).toLocaleDateString()}
                         </span>

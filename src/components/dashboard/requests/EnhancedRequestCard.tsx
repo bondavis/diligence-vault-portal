@@ -299,7 +299,7 @@ export const EnhancedRequestCard = ({
                           {commentCount} Comment{commentCount !== 1 ? 's' : ''}
                         </Badge>
                       </TooltipTrigger>
-                      <TooltipContent className="max-w-sm p-3">
+                      <TooltipContent className="max-w-sm p-3" sideOffset={2}>
                         <p className="text-sm font-medium text-amber-800 mb-1">Latest BBT Feedback:</p>
                         <p className="text-sm italic text-amber-700">"{latestComment.slice(0, 100)}{latestComment.length > 100 ? '...' : ''}"</p>
                       </TooltipContent>

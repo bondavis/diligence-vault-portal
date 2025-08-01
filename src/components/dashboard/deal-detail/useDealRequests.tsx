@@ -23,6 +23,15 @@ export const useDealRequests = (dealId: string) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  // Function to remove deleted requests from local state
+  const removeRequestsFromState = (deletedRequestIds: string[]) => {
+    setRequests(prev => {
+      const filtered = prev.filter(req => !deletedRequestIds.includes(req.id));
+      calculateCategoryProgress(filtered);
+      return filtered;
+    });
+  };
+
   const computeRequestStatus = (request: DiligenceRequest) => {
     const hasDocuments = (request.document_count || 0) > 0;
     const hasResponse = request.has_response;
@@ -138,6 +147,7 @@ export const useDealRequests = (dealId: string) => {
     categoryProgress,
     loading,
     loadDealRequests,
-    getRequestCounts
+    getRequestCounts,
+    removeRequestsFromState
   };
 };

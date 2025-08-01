@@ -40,14 +40,29 @@ export const BulkRequestActions = ({
   const handleBulkDelete = async () => {
     try {
       setIsDeleting(true);
+      console.log('Starting bulk deletion for requests:', selectedRequests);
 
-      // Delete all documents associated with these requests first
+      // Delete comments first
+      const { error: commentsError } = await supabase
+        .from('request_comments')
+        .delete()
+        .in('request_id', selectedRequests);
+
+      if (commentsError) {
+        console.error('Error deleting comments:', commentsError);
+        throw commentsError;
+      }
+
+      // Delete all documents associated with these requests
       const { error: documentsError } = await supabase
         .from('request_documents')
         .delete()
         .in('request_id', selectedRequests);
 
-      if (documentsError) throw documentsError;
+      if (documentsError) {
+        console.error('Error deleting documents:', documentsError);
+        throw documentsError;
+      }
 
       // Delete all responses associated with these requests
       const { error: responsesError } = await supabase
@@ -55,7 +70,10 @@ export const BulkRequestActions = ({
         .delete()
         .in('request_id', selectedRequests);
 
-      if (responsesError) throw responsesError;
+      if (responsesError) {
+        console.error('Error deleting responses:', responsesError);
+        throw responsesError;
+      }
 
       // Delete the requests themselves
       const { error: requestsError } = await supabase
@@ -63,21 +81,31 @@ export const BulkRequestActions = ({
         .delete()
         .in('id', selectedRequests);
 
-      if (requestsError) throw requestsError;
+      if (requestsError) {
+        console.error('Error deleting requests:', requestsError);
+        throw requestsError;
+      }
+
+      console.log('Successfully deleted all requests and related data');
 
       toast({
         title: "Success",
-        description: `${selectedRequests.length} request(s) deleted successfully`,
+        description: `${selectedRequests.length} request(s) and all related data deleted successfully`,
       });
 
-      onRequestsDeleted();
+      // Clear selection immediately
       onSelectionClear();
       setShowDeleteDialog(false);
+      
+      // Add delay before triggering data refresh to ensure database operations are complete
+      setTimeout(() => {
+        onRequestsDeleted();
+      }, 300);
     } catch (error) {
-      console.error('Error deleting requests:', error);
+      console.error('Error during bulk deletion:', error);
       toast({
         title: "Error",
-        description: "Failed to delete requests",
+        description: `Failed to delete requests: ${error.message || 'Unknown error'}`,
         variant: "destructive",
       });
     } finally {

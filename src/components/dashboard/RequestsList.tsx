@@ -35,6 +35,7 @@ interface RequestsListProps {
   }) => void;
   onRequestClick: (request: DiligenceRequest) => void;
   onRequestsUpdated: () => void;
+  onBulkRequestsDeleted?: (deletedRequestIds: string[]) => void;
   getRequestCounts: () => {
     total: number;
     high: number;
@@ -56,6 +57,7 @@ export const RequestsList = ({
   onFilterChange,
   onRequestClick,
   onRequestsUpdated,
+  onBulkRequestsDeleted,
   getRequestCounts,
   isAdmin = false
 }: RequestsListProps) => {
@@ -140,6 +142,7 @@ export const RequestsList = ({
         onFilterChange={onFilterChange}
         onRequestClick={onRequestClick}
         onRequestsUpdated={onRequestsUpdated}
+        onBulkRequestsDeleted={onBulkRequestsDeleted}
         getRequestCounts={getRequestCounts}
         isAdmin={isAdmin}
         selectedRequests={selectedRequests}

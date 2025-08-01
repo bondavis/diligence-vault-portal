@@ -71,6 +71,7 @@ export const useDealRequests = (dealId: string) => {
   const loadDealRequests = async () => {
     try {
       setLoading(true);
+      console.log('Loading deal requests for deal:', dealId);
       
       const { data: requestsData, error: requestsError } = await supabase
         .from('diligence_requests')
@@ -79,6 +80,8 @@ export const useDealRequests = (dealId: string) => {
         .order('created_at', { ascending: false });
 
       if (requestsError) throw requestsError;
+
+      console.log('Found requests:', requestsData?.length || 0);
 
       // Get document counts and response status for each request
       const requestsWithStatus = await Promise.all(

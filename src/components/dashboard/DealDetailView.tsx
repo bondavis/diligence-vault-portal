@@ -43,7 +43,7 @@ interface DealDetailViewProps {
 }
 
 export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailViewProps) => {
-  const { requests, categoryProgress, loading, loadDealRequests, getRequestCounts } = useDealRequests(deal.id);
+  const { requests, categoryProgress, loading, loadDealRequests, getRequestCounts, removeRequestsFromState } = useDealRequests(deal.id);
   const [filteredRequests, setFilteredRequests] = useState<DiligenceRequest[]>([]);
   const [selectedRequest, setSelectedRequest] = useState<DiligenceRequest | null>(null);
   const [loadingTemplate, setLoadingTemplate] = useState(false);
@@ -207,7 +207,16 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
   const overallCompletionPercentage = totalRequests > 0 ? Math.round((completedRequests / totalRequests) * 100) : 0;
 
   const handleRequestsUpdated = () => {
+    // Just reload the data, don't apply templates
     loadDealRequests();
+    if (onRequestUpdate) {
+      onRequestUpdate();
+    }
+  };
+
+  const handleBulkRequestsDeleted = (deletedRequestIds: string[]) => {
+    // Update local state immediately instead of full reload
+    removeRequestsFromState(deletedRequestIds);
     if (onRequestUpdate) {
       onRequestUpdate();
     }
@@ -278,6 +287,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
               onFilterChange={setActiveFilters}
               onRequestClick={setSelectedRequest}
               onRequestsUpdated={handleRequestsUpdated}
+              onBulkRequestsDeleted={handleBulkRequestsDeleted}
               getRequestCounts={getRequestCounts}
               isAdmin={true}
             />

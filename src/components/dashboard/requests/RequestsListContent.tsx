@@ -34,6 +34,7 @@ interface RequestsListContentProps {
   }) => void;
   onRequestClick: (request: DiligenceRequest) => void;
   onRequestsUpdated: () => void;
+  onBulkRequestsDeleted?: (deletedRequestIds: string[]) => void;
   getRequestCounts: () => {
     total: number;
     high: number;
@@ -59,6 +60,7 @@ export const RequestsListContent = ({
   onFilterChange,
   onRequestClick,
   onRequestsUpdated,
+  onBulkRequestsDeleted,
   getRequestCounts,
   isAdmin = false,
   selectedRequests,
@@ -83,7 +85,13 @@ export const RequestsListContent = ({
         <>
           <BulkRequestActions
             selectedRequests={selectedRequests}
-            onRequestsDeleted={onRequestsUpdated}
+            onRequestsDeleted={() => {
+              if (onBulkRequestsDeleted) {
+                onBulkRequestsDeleted(selectedRequests);
+              } else {
+                onRequestsUpdated();
+              }
+            }}
             onSelectionClear={() => onSelectAll(false)}
           />
           

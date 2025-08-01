@@ -34,6 +34,7 @@ interface CollapsibleRequestsSectionProps {
   }) => void;
   onRequestClick: (request: DiligenceRequest) => void;
   onRequestsUpdated: () => void;
+  onBulkRequestsDeleted?: (deletedRequestIds: string[]) => void;
   getRequestCounts: () => {
     total: number;
     high: number;
@@ -59,6 +60,7 @@ export const CollapsibleRequestsSection = ({
   onFilterChange,
   onRequestClick,
   onRequestsUpdated,
+  onBulkRequestsDeleted,
   getRequestCounts,
   isAdmin = false,
   selectedRequests,
@@ -236,6 +238,7 @@ export const CollapsibleRequestsSection = ({
             onFilterChange={onFilterChange}
             onRequestClick={onRequestClick}
             onRequestsUpdated={onRequestsUpdated}
+            onBulkRequestsDeleted={onBulkRequestsDeleted}
             getRequestCounts={getRequestCounts}
             isAdmin={isAdmin}
             selectedRequests={selectedRequests}

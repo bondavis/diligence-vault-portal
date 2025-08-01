@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      deal_template_applications: {
+        Row: {
+          applied_at: string
+          applied_by: string
+          deal_id: string
+          id: string
+          notes: string | null
+          template_version: string | null
+        }
+        Insert: {
+          applied_at?: string
+          applied_by: string
+          deal_id: string
+          id?: string
+          notes?: string | null
+          template_version?: string | null
+        }
+        Update: {
+          applied_at?: string
+          applied_by?: string
+          deal_id?: string
+          id?: string
+          notes?: string | null
+          template_version?: string | null
+        }
+        Relationships: []
+      }
       deals: {
         Row: {
           company_name: string

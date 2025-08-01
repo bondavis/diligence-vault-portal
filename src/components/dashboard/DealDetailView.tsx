@@ -49,6 +49,7 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
   const [loadingTemplate, setLoadingTemplate] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
   const [showQuestionnaire, setShowQuestionnaire] = useState(false);
+  const [templateApplied, setTemplateApplied] = useState(false);
   const [questionnaireStatus, setQuestionnaireStatus] = useState<{
     exists: boolean;
     completed: boolean;
@@ -61,12 +62,22 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
   }>({});
   const { toast } = useToast();
 
-  // Load questionnaire status and log deal access
+  // Load questionnaire status, check template status, and log deal access
   useEffect(() => {
     loadQuestionnaireStatus();
+    checkTemplateStatus();
     // Log deal access for audit
     auditLogger.logDealAccess(deal.id, deal.name);
   }, [deal.id, deal.name]);
+
+  const checkTemplateStatus = async () => {
+    try {
+      const hasTemplate = await templateService.hasTemplateBeenApplied(deal.id);
+      setTemplateApplied(hasTemplate);
+    } catch (error) {
+      console.error('Error checking template status:', error);
+    }
+  };
 
   const loadQuestionnaireStatus = async () => {
     try {
@@ -176,19 +187,32 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
     setFilteredRequests(filtered);
   }, [requests, activeFilters]);
 
-  const handleLoadTemplate = async () => {
+  const handleLoadTemplate = async (options?: { forceRefresh?: boolean }) => {
     try {
       setLoadingTemplate(true);
       const user = await supabase.auth.getUser();
       if (!user.data.user) throw new Error('Not authenticated');
 
-      await templateService.applyTemplateToDeal(deal.id, user.data.user.id);
+      const result = await templateService.applyTemplateToDeal(deal.id, user.data.user.id, options);
+      
+      let message = '';
+      if (result.created > 0 && result.skipped > 0) {
+        message = `Added ${result.created} new requests, skipped ${result.skipped} existing ones`;
+      } else if (result.created > 0) {
+        message = `Added ${result.created} template requests`;
+      } else if (result.skipped > 0) {
+        message = `All ${result.skipped} template requests already exist`;
+      } else {
+        message = "No template requests available";
+      }
       
       toast({
         title: "Success",
-        description: "Template requests loaded successfully",
+        description: message,
       });
 
+      // Update template applied status
+      setTemplateApplied(true);
       loadDealRequests();
     } catch (error) {
       console.error('Error loading template:', error);
@@ -272,7 +296,9 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
           <DashboardErrorBoundary>
             <DealActions 
               onLoadTemplate={handleLoadTemplate} 
-              loadingTemplate={loadingTemplate} 
+              loadingTemplate={loadingTemplate}
+              hasExistingRequests={requests.length > 0}
+              templateApplied={templateApplied}
             />
           </DashboardErrorBoundary>
 

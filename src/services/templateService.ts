@@ -66,19 +66,29 @@ export const templateService = {
       return { created: 0, skipped: 0 };
     }
 
+    console.log(`Starting template application for deal ${dealId}. Templates available: ${templates.length}, forceRefresh: ${options.forceRefresh}`);
+
     let requestsToCreate = templates;
     let skippedCount = 0;
 
-    // If not forcing refresh, check what already exists
-    if (!options.forceRefresh) {
-      const existingTitles = await this.getExistingRequestTitles(dealId);
-      const existingTitlesSet = new Set(existingTitles);
-      
+    // Always check existing requests to avoid duplicates, unless explicitly forcing refresh
+    const existingTitles = await this.getExistingRequestTitles(dealId);
+    const existingTitlesSet = new Set(existingTitles);
+    
+    console.log(`Found ${existingTitles.length} existing requests:`, existingTitles);
+    
+    if (options.forceRefresh) {
+      // For force refresh, we still want to avoid creating exact duplicates
+      console.log('Force refresh mode: will recreate template requests');
+    } else {
+      // For normal mode, only create missing requests
       requestsToCreate = templates.filter(template => {
         const exists = existingTitlesSet.has(template.title);
         if (exists) skippedCount++;
         return !exists;
       });
+
+      console.log(`Filtered to ${requestsToCreate.length} new requests to create, skipping ${skippedCount} existing ones`);
 
       if (requestsToCreate.length === 0) {
         console.log(`All ${templates.length} template items already exist for deal ${dealId}`);

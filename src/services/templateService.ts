@@ -27,18 +27,39 @@ export const templateService = {
   },
 
   async hasTemplateBeenApplied(dealId: string): Promise<boolean> {
-    const { data, error } = await supabase
+    // Check if there's a record in deal_template_applications
+    const { data: applicationData, error: appError } = await supabase
       .from('deal_template_applications')
       .select('id')
       .eq('deal_id', dealId)
       .limit(1);
 
-    if (error) {
-      console.error('Error checking template application:', error);
+    if (appError) {
+      console.error('Error checking template application:', appError);
+    }
+
+    if (applicationData && applicationData.length > 0) {
+      return true;
+    }
+
+    // Fallback: check if deal has any requests that match template titles
+    const templates = await this.getTemplateItems();
+    if (templates.length === 0) return false;
+
+    const templateTitles = templates.map(t => t.title);
+    const { data: requestData, error: reqError } = await supabase
+      .from('diligence_requests')
+      .select('id')
+      .eq('deal_id', dealId)
+      .in('title', templateTitles)
+      .limit(1);
+
+    if (reqError) {
+      console.error('Error checking existing template requests:', reqError);
       return false;
     }
 
-    return (data?.length || 0) > 0;
+    return (requestData?.length || 0) > 0;
   },
 
   async getExistingRequestTitles(dealId: string): Promise<string[]> {
@@ -58,7 +79,7 @@ export const templateService = {
   async applyTemplateToDeal(dealId: string, createdBy: string, options: { 
     forceRefresh?: boolean;
     onlyMissing?: boolean;
-  } = {}): Promise<{ created: number; skipped: number }> {
+  } = {}): Promise<{ created: number; skipped: number; duplicatesFound?: number }> {
     const templates = await this.getTemplateItems();
     
     if (templates.length === 0) {
@@ -68,72 +89,146 @@ export const templateService = {
 
     console.log(`Starting template application for deal ${dealId}. Templates available: ${templates.length}, forceRefresh: ${options.forceRefresh}`);
 
-    let requestsToCreate = templates;
-    let skippedCount = 0;
-
-    // Always check existing requests to avoid duplicates, unless explicitly forcing refresh
+    // Always check existing requests to understand current state
     const existingTitles = await this.getExistingRequestTitles(dealId);
     const existingTitlesSet = new Set(existingTitles);
     
-    console.log(`Found ${existingTitles.length} existing requests:`, existingTitles);
-    
+    console.log(`Found ${existingTitles.length} existing requests for deal ${dealId}`);
+
     if (options.forceRefresh) {
-      // For force refresh, we still want to avoid creating exact duplicates
-      console.log('Force refresh mode: will recreate template requests');
-    } else {
-      // For normal mode, only create missing requests
-      requestsToCreate = templates.filter(template => {
-        const exists = existingTitlesSet.has(template.title);
-        if (exists) skippedCount++;
-        return !exists;
-      });
+      console.log('Force refresh mode: will delete existing template requests and recreate all');
+      
+      // Delete existing template requests to avoid constraint violations
+      const { error: deleteError } = await supabase
+        .from('diligence_requests')
+        .delete()
+        .eq('deal_id', dealId)
+        .in('title', templates.map(t => t.title));
 
-      console.log(`Filtered to ${requestsToCreate.length} new requests to create, skipping ${skippedCount} existing ones`);
-
-      if (requestsToCreate.length === 0) {
-        console.log(`All ${templates.length} template items already exist for deal ${dealId}`);
-        return { created: 0, skipped: skippedCount };
+      if (deleteError) {
+        console.error('Error deleting existing template requests:', deleteError);
+        throw deleteError;
       }
-    }
 
-    const requests = requestsToCreate.map(template => ({
-      deal_id: dealId,
-      created_by: createdBy,
-      title: template.title,
-      description: template.description,
-      category: template.category,
-      priority: template.priority,
-      period_text: template.typical_period,
-      allow_file_upload: template.allow_file_upload,
-      allow_text_response: template.allow_text_response,
-      status: 'pending' as const
-    }));
-
-    const { error } = await supabase
-      .from('diligence_requests')
-      .insert(requests);
-
-    if (error) {
-      console.error('Error applying template to deal:', error);
-      throw error;
-    }
-
-    // Record the template application
-    const { error: appError } = await supabase
-      .from('deal_template_applications')
-      .insert({
+      // Create all template requests
+      const requests = templates.map(template => ({
         deal_id: dealId,
-        applied_by: createdBy,
-        notes: options.forceRefresh ? 'Force refresh' : 'Initial application'
-      });
+        created_by: createdBy,
+        title: template.title,
+        description: template.description,
+        category: template.category,
+        priority: template.priority,
+        period_text: template.typical_period,
+        allow_file_upload: template.allow_file_upload,
+        allow_text_response: template.allow_text_response,
+        status: 'pending' as const
+      }));
 
-    if (appError) {
-      console.error('Error recording template application:', appError);
-      // Don't throw here as the main operation succeeded
+      const { error: insertError } = await supabase
+        .from('diligence_requests')
+        .insert(requests);
+
+      if (insertError) {
+        console.error('Error inserting template requests:', insertError);
+        throw insertError;
+      }
+
+      console.log(`Force refresh completed: recreated ${requests.length} template requests`);
+      return { created: requests.length, skipped: 0 };
+    } else {
+      // Normal mode: only create missing requests
+      const missingTemplates = templates.filter(template => !existingTitlesSet.has(template.title));
+      
+      console.log(`Found ${missingTemplates.length} missing template requests out of ${templates.length} total templates`);
+
+      if (missingTemplates.length === 0) {
+        console.log(`All template items already exist for deal ${dealId}`);
+        return { created: 0, skipped: templates.length };
+      }
+
+      const requests = missingTemplates.map(template => ({
+        deal_id: dealId,
+        created_by: createdBy,
+        title: template.title,
+        description: template.description,
+        category: template.category,
+        priority: template.priority,
+        period_text: template.typical_period,
+        allow_file_upload: template.allow_file_upload,
+        allow_text_response: template.allow_text_response,
+        status: 'pending' as const
+      }));
+
+      const { error: insertError } = await supabase
+        .from('diligence_requests')
+        .insert(requests);
+
+      if (insertError) {
+        // Handle unique constraint violations gracefully
+        if (insertError.code === '23505') {
+          console.log('Duplicate request titles detected, skipping duplicates');
+          return { created: 0, skipped: requests.length, duplicatesFound: requests.length };
+        }
+        console.error('Error inserting template requests:', insertError);
+        throw insertError;
+      }
+
+      console.log(`Created ${requests.length} new template requests, skipped ${existingTitles.length} existing ones`);
+      return { created: requests.length, skipped: existingTitles.length };
+    }
+  },
+
+  async cleanupDuplicateRequests(dealId: string): Promise<{ cleaned: number }> {
+    console.log(`Starting duplicate cleanup for deal ${dealId}`);
+    
+    // Find and count duplicates before cleanup
+    const { data: duplicates, error: findError } = await supabase
+      .from('diligence_requests')
+      .select('id, title, created_at')
+      .eq('deal_id', dealId)
+      .order('title')
+      .order('created_at', { ascending: false });
+
+    if (findError) {
+      console.error('Error finding duplicates:', findError);
+      throw findError;
     }
 
-    console.log(`Applied ${requests.length} template items to deal ${dealId}, skipped ${skippedCount}`);
-    return { created: requests.length, skipped: skippedCount };
+    // Group by title and identify duplicates to remove
+    const titleGroups = duplicates?.reduce((acc, req) => {
+      if (!acc[req.title]) acc[req.title] = [];
+      acc[req.title].push(req);
+      return acc;
+    }, {} as Record<string, any[]>) || {};
+
+    const duplicateIds: string[] = [];
+    Object.values(titleGroups).forEach(group => {
+      if (group.length > 1) {
+        // Keep the first (most recent) and mark others for deletion
+        duplicateIds.push(...group.slice(1).map(req => req.id));
+      }
+    });
+
+    if (duplicateIds.length === 0) {
+      console.log('No duplicates found');
+      return { cleaned: 0 };
+    }
+
+    console.log(`Found ${duplicateIds.length} duplicate requests to clean up`);
+
+    // Delete duplicates
+    const { error: deleteError } = await supabase
+      .from('diligence_requests')
+      .delete()
+      .in('id', duplicateIds);
+
+    if (deleteError) {
+      console.error('Error cleaning up duplicates:', deleteError);
+      throw deleteError;
+    }
+
+    console.log(`Successfully cleaned up ${duplicateIds.length} duplicate requests`);
+    return { cleaned: duplicateIds.length };
   },
 
   async getTemplateCount(): Promise<number> {

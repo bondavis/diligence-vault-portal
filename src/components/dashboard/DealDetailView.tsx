@@ -206,10 +206,18 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
         message = "No template requests available";
       }
       
-      toast({
-        title: "Success",
-        description: message,
-      });
+      if (result.duplicatesFound && result.duplicatesFound > 0) {
+        toast({
+          title: "Duplicates Detected",
+          description: `Found ${result.duplicatesFound} duplicate requests. Use "Clean Up Duplicates" to remove them.`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Success",
+          description: message,
+        });
+      }
 
       // Update template applied status
       setTemplateApplied(true);
@@ -219,6 +227,38 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
       toast({
         title: "Error",
         description: "Failed to load template requests",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingTemplate(false);
+    }
+  };
+
+  const handleCleanupDuplicates = async () => {
+    try {
+      setLoadingTemplate(true);
+      const result = await templateService.cleanupDuplicateRequests(deal.id);
+      
+      if (result.cleaned > 0) {
+        toast({
+          title: "Cleanup Complete",
+          description: `${result.cleaned} duplicate requests have been removed.`,
+        });
+        
+        // Reload the requests to show the cleaned state
+        loadDealRequests();
+      } else {
+        toast({
+          title: "No Duplicates Found",
+          description: "No duplicate requests were found for this deal.",
+        });
+      }
+      
+    } catch (error) {
+      console.error('Error cleaning up duplicates:', error);
+      toast({
+        title: "Error",
+        description: "Failed to clean up duplicates. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -294,12 +334,13 @@ export const DealDetailView = ({ deal, onBack, onRequestUpdate }: DealDetailView
           </DashboardErrorBoundary>
 
           <DashboardErrorBoundary>
-            <DealActions 
-              onLoadTemplate={handleLoadTemplate} 
-              loadingTemplate={loadingTemplate}
-              hasExistingRequests={requests.length > 0}
-              templateApplied={templateApplied}
-            />
+          <DealActions 
+            onLoadTemplate={handleLoadTemplate}
+            onCleanupDuplicates={handleCleanupDuplicates}
+            loadingTemplate={loadingTemplate}
+            hasExistingRequests={requests.length > 0}
+            templateApplied={templateApplied}
+          />
           </DashboardErrorBoundary>
 
           <DashboardErrorBoundary>

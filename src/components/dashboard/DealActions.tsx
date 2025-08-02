@@ -3,16 +3,17 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Plus, Upload, RefreshCw, ChevronDown } from 'lucide-react';
+import { Plus, Upload, RefreshCw, ChevronDown, Trash2 } from 'lucide-react';
 
 interface DealActionsProps {
   onLoadTemplate: (options?: { forceRefresh?: boolean }) => void;
+  onCleanupDuplicates?: () => void;
   loadingTemplate: boolean;
   hasExistingRequests: boolean;
   templateApplied: boolean;
 }
 
-export const DealActions = ({ onLoadTemplate, loadingTemplate, hasExistingRequests, templateApplied }: DealActionsProps) => {
+export const DealActions = ({ onLoadTemplate, onCleanupDuplicates, loadingTemplate, hasExistingRequests, templateApplied }: DealActionsProps) => {
   const [showRefreshDialog, setShowRefreshDialog] = useState(false);
 
   const handleInitialLoad = () => {
@@ -58,6 +59,12 @@ export const DealActions = ({ onLoadTemplate, loadingTemplate, hasExistingReques
                 <RefreshCw className="h-4 w-4 mr-2" />
                 Reset to Template
               </DropdownMenuItem>
+              {onCleanupDuplicates && (
+                <DropdownMenuItem onClick={onCleanupDuplicates}>
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Clean Up Duplicates
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}

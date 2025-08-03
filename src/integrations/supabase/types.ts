@@ -90,6 +90,7 @@ export type Database = {
           period_start: string | null
           period_text: string | null
           priority: Database["public"]["Enums"]["request_priority"]
+          stage_id: string | null
           status: Database["public"]["Enums"]["request_status"]
           title: string
           updated_at: string
@@ -109,6 +110,7 @@ export type Database = {
           period_start?: string | null
           period_text?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
+          stage_id?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           title: string
           updated_at?: string
@@ -128,6 +130,7 @@ export type Database = {
           period_start?: string | null
           period_text?: string | null
           priority?: Database["public"]["Enums"]["request_priority"]
+          stage_id?: string | null
           status?: Database["public"]["Enums"]["request_status"]
           title?: string
           updated_at?: string
@@ -138,6 +141,13 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "diligence_requests_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "diligence_stages"
             referencedColumns: ["id"]
           },
         ]
@@ -176,6 +186,39 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      diligence_stages: {
+        Row: {
+          completion_threshold: number | null
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          completion_threshold?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sort_order: number
+          updated_at?: string
+        }
+        Update: {
+          completion_threshold?: number | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -447,6 +490,7 @@ export type Database = {
           id: string
           priority: Database["public"]["Enums"]["request_priority"]
           sort_order: number | null
+          stage_id: string | null
           title: string
           typical_period: string | null
           updated_at: string
@@ -460,6 +504,7 @@ export type Database = {
           id?: string
           priority?: Database["public"]["Enums"]["request_priority"]
           sort_order?: number | null
+          stage_id?: string | null
           title: string
           typical_period?: string | null
           updated_at?: string
@@ -473,11 +518,20 @@ export type Database = {
           id?: string
           priority?: Database["public"]["Enums"]["request_priority"]
           sort_order?: number | null
+          stage_id?: string | null
           title?: string
           typical_period?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "request_templates_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "diligence_stages"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_deals: {
         Row: {

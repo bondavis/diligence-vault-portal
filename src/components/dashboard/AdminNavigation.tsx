@@ -4,6 +4,7 @@ import { DealManagement } from './DealManagement';
 import { TemplateManager } from '@/components/templates/TemplateManager';
 import { UserManagement } from '@/components/users/UserManagement';
 import { QuestionnaireManager } from '@/components/questionnaire/QuestionnaireManager';
+import { StageManagement } from '@/components/admin/StageManagement';
 import { User } from '@/pages/Index';
 
 interface AdminNavigationProps {
@@ -20,10 +21,11 @@ export const AdminNavigation = ({ user }: AdminNavigationProps) => {
 
   return (
     <Tabs defaultValue="deals" className="space-y-6">
-      <TabsList className={`grid w-full ${canManageUsers ? 'grid-cols-4' : canManageTemplates ? 'grid-cols-3' : 'grid-cols-2'}`}>
+      <TabsList className={`grid w-full ${canManageUsers ? 'grid-cols-5' : canManageTemplates ? 'grid-cols-4' : 'grid-cols-2'}`}>
         {canViewDeals && <TabsTrigger value="deals">Deals</TabsTrigger>}
         {canManageTemplates && <TabsTrigger value="questionnaire">Post-LOI Questionnaire</TabsTrigger>}
         {canManageTemplates && <TabsTrigger value="templates">Request Templates</TabsTrigger>}
+        {canManageTemplates && <TabsTrigger value="stages">Workflow Stages</TabsTrigger>}
         {canManageUsers && <TabsTrigger value="users">Users</TabsTrigger>}
       </TabsList>
 
@@ -42,6 +44,12 @@ export const AdminNavigation = ({ user }: AdminNavigationProps) => {
       {canManageTemplates && (
         <TabsContent value="templates">
           <TemplateManager />
+        </TabsContent>
+      )}
+
+      {canManageTemplates && (
+        <TabsContent value="stages">
+          <StageManagement />
         </TabsContent>
       )}
 

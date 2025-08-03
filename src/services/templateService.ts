@@ -2,6 +2,7 @@
 import { supabase } from '@/integrations/supabase/client';
 
 export interface TemplateItem {
+  id?: string;
   title: string;
   description: string | null;
   category: string;
@@ -9,13 +10,14 @@ export interface TemplateItem {
   typical_period: string | null;
   allow_file_upload: boolean;
   allow_text_response: boolean;
+  stage_id?: string | null;
 }
 
 export const templateService = {
   async getTemplateItems(): Promise<TemplateItem[]> {
     const { data, error } = await supabase
       .from('request_templates')
-      .select('title, description, category, priority, typical_period, allow_file_upload, allow_text_response')
+      .select('id, title, description, category, priority, typical_period, allow_file_upload, allow_text_response, stage_id')
       .order('sort_order', { ascending: true });
 
     if (error) {
@@ -121,6 +123,7 @@ export const templateService = {
         period_text: template.typical_period,
         allow_file_upload: template.allow_file_upload,
         allow_text_response: template.allow_text_response,
+        stage_id: template.stage_id,
         status: 'pending' as const
       }));
 
@@ -156,6 +159,7 @@ export const templateService = {
         period_text: template.typical_period,
         allow_file_upload: template.allow_file_upload,
         allow_text_response: template.allow_text_response,
+        stage_id: template.stage_id,
         status: 'pending' as const
       }));
 

@@ -34,10 +34,7 @@ const Index = () => {
 
   useEffect(() => {
     console.log('Index useEffect triggered:', { loading, user: !!user });
-    if (!loading && !user) {
-      console.log('Redirecting to /auth because no user found');
-      navigate('/auth');
-    }
+    // No authentication required - everyone gets admin access
   }, [user, loading, navigate]);
 
   if (loading) {
@@ -58,7 +55,7 @@ const Index = () => {
   }
 
   if (!user || !profile) {
-    return null; // Will redirect to auth
+    return null; // No redirect needed, everyone gets admin access
   }
 
   const currentUser: User = {
